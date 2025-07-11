@@ -11,11 +11,11 @@
 #' @examples
 #' \dontrun{
 #' data <- sero_load_data()
-#' locations <- sero_compute_optimal_locations(data)
-#' routes <- sero_calculate_routes(locations, data$accident)
+#' locations <- sero_optimal(data)
+#' routes <- sero_routes(locations, data$accident)
 #' plot(routes)
 #' }
-sero_calculate_routes <- function(locations, accidents, max_routes = 10) {
+sero_routes <- function(locations, accidents, max_routes = 10) {
   
   # Handle input types
   if (inherits(locations, "sero_optimal_locations")) {

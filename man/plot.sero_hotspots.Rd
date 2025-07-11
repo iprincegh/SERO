@@ -4,10 +4,16 @@
 \alias{plot.sero_hotspots}
 \title{Plot method for sero_hotspots using ggplot2}
 \usage{
-\method{plot}{sero_hotspots}(x, ...)
+\method{plot}{sero_hotspots}(x, data = NULL, show_munster = TRUE, show_landuse = FALSE, ...)
 }
 \arguments{
 \item{x}{sero_hotspots object}
+
+\item{data}{Original data for context (optional)}
+
+\item{show_munster}{Logical, whether to show Münster city boundaries (default=TRUE)}
+
+\item{show_landuse}{Logical, whether to show land use overlay (default=FALSE)}
 
 \item{...}{additional arguments (unused)}
 }

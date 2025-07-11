@@ -35,18 +35,18 @@ sero_analyze <- function(risk_categories = c(1, 2),
   
   # Step 1: Identify hotspots
   cat("Step 1: Identifying accident hotspots using point pattern analysis...\n")
-  hotspots <- sero_identify_hotspots(data$accident, risk_categories = risk_categories)
+  hotspots <- sero_hotspots(data$accident, risk_categories = risk_categories)
   
   # Step 2: Compute optimal locations using enhanced multi-criteria analysis
   cat("Step 2: Computing optimal service locations using enhanced multi-criteria analysis...\n")
-  locations <- sero_calculate_optimal_locations(data, 
-                                               risk_categories = risk_categories,
-                                               suitable_landuse = suitable_landuse,
-                                               max_locations = max_locations)
+  locations <- sero_optimal(data, 
+                           risk_categories = risk_categories,
+                           suitable_landuse = suitable_landuse,
+                           max_locations = max_locations)
   
   # Step 3: Calculate routes
   cat("Step 3: Calculating emergency routes...\n")
-  routes <- sero_calculate_routes(locations, data$accident, max_routes = max_routes)
+  routes <- sero_routes(locations, data$accident, max_routes = max_routes)
   
   # Create combined results
   results <- list(

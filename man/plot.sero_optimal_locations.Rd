@@ -4,7 +4,15 @@
 \alias{plot.sero_optimal_locations}
 \title{Plot optimal locations with context}
 \usage{
-\method{plot}{sero_optimal_locations}(x, data = NULL, show_grid = FALSE, ...)
+\method{plot}{sero_optimal_locations}(
+  x,
+  data = NULL,
+  show_grid = FALSE,
+  show_munster = TRUE,
+  show_hotspots = TRUE,
+  show_landuse = FALSE,
+  ...
+)
 }
 \arguments{
 \item{x}{sero_optimal_locations object}
@@ -12,6 +20,12 @@
 \item{data}{Original data for context (optional)}
 
 \item{show_grid}{Logical, whether to show grid cells (default=FALSE)}
+
+\item{show_munster}{Logical, whether to show Münster city boundaries (default=TRUE)}
+
+\item{show_hotspots}{Logical, whether to show accident hotspots (default=TRUE)}
+
+\item{show_landuse}{Logical, whether to show land use overlay (default=FALSE)}
 
 \item{...}{additional arguments (unused)}
 }

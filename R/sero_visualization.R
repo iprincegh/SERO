@@ -9,7 +9,7 @@
 #' @param show_districts Logical, whether to show district boundaries (default=TRUE)
 #' @return ggplot2 object
 #' @export
-sero_plot_munster <- function(data, show_districts = TRUE) {
+sero_plot_base <- function(data, show_districts = TRUE) {
   
   if (!"districts" %in% names(data)) {
     warning("No districts layer found in data")
@@ -63,7 +63,7 @@ sero_plot_munster <- function(data, show_districts = TRUE) {
 #' @param label_landuse Logical, whether to show land use labels (default=TRUE)
 #' @return ggplot2 object
 #' @export
-sero_plot_landuse <- function(data, label_landuse = TRUE) {
+sero_plot_land <- function(data, label_landuse = TRUE) {
   
   if (!"landuse" %in% names(data)) {
     warning("No landuse layer found in data")
@@ -143,7 +143,7 @@ sero_plot_landuse <- function(data, label_landuse = TRUE) {
 #' @param show_values Logical, whether to show density values (default=TRUE)
 #' @return ggplot2 object
 #' @export
-sero_plot_population <- function(data, show_values = TRUE) {
+sero_plot_pop <- function(data, show_values = TRUE) {
   
   if (!"population" %in% names(data)) {
     warning("No population layer found in data")
@@ -303,7 +303,7 @@ sero_plot_roads <- function(data, road_type = "all") {
 #' @param show_labels Logical, whether to show severity labels (default=TRUE)
 #' @return ggplot2 object
 #' @export
-sero_plot_accidents <- function(data, risk_categories = c(1, 2, 3), show_labels = TRUE) {
+sero_plot_acc <- function(data, risk_categories = c(1, 2, 3), show_labels = TRUE) {
   
   if (!"accident" %in% names(data)) {
     warning("No accident layer found in data")
@@ -398,7 +398,7 @@ sero_plot_accidents <- function(data, risk_categories = c(1, 2, 3), show_labels 
 #' @param alpha_background Alpha value for background layers (default=0.3)
 #' @return ggplot2 object
 #' @export
-sero_plot_combined <- function(data, include_layers = c("districts", "landuse", "roads", "accidents"), 
+sero_plot_combo <- function(data, include_layers = c("districts", "landuse", "roads", "accidents"), 
                               alpha_background = 0.3) {
   
   # Start with base plot

@@ -5,6 +5,7 @@ A simple and focused R package for spatial emergency response optimization using
 ## Features
 
 - **Hotspot Analysis**: Point pattern analysis using spatstat (no interpolation)
+- **Accident Heatmaps**: Continuous density visualization using kernel density estimation
 - **Multi-Criteria Optimization**: 6 specific criteria for optimal location computation
 - **Route Calculation**: Fastest routes to accident scenes
 - **Built-in Data**: Uses only data from inst/gpkg folder
@@ -54,18 +55,25 @@ plot(results$routes)     # Emergency routes
 data <- sero_load_data()
 
 # Step 1: Identify hotspots using point pattern analysis
-hotspots <- sero_identify_hotspots(
+hotspots <- sero_hotspots(
   data$accident,
   risk_categories = c(1, 2),  # Fatal and serious accidents
-  bandwidth = 1000,           # 1km bandwidth
+  buffer = 1000,              # 1km buffer
   min_events = 5              # Minimum 5 accidents per hotspot
 )
 
+# Step 1.5: Create accident density heatmap
+heatmap <- sero_heatmap(
+  data$accident,
+  bandwidth = 1000,           # 1km bandwidth for density estimation
+  grid_size = 100,            # 100m grid resolution
+  color_scheme = "viridis"    # Color scheme
+)
+
 # Step 2: Compute optimal locations using 6 criteria
-locations <- sero_compute_optimal_locations(
+locations <- sero_optimal(
   data,
   risk_categories = c(1, 2),
-  suitable_landuse = c("residential", "commercial", "industrial"),
   min_road_distance = 500,    # Minimum 500m from roads
   max_road_distance = 1000,   # Maximum 1000m from roads
   grid_size = 100,            # 100m grid cells
@@ -73,8 +81,85 @@ locations <- sero_compute_optimal_locations(
 )
 
 # Step 3: Calculate routes
-routes <- sero_calculate_routes(locations, data$accident, max_routes = 20)
+routes <- sero_routes(locations, data$accident, max_routes = 20)
 ```
+
+## Parameter Customization
+
+The SERO package offers flexible parameter customization for optimal location analysis:
+
+### Custom Scoring Weights
+
+Customize the importance of different criteria:
+
+```r
+# Prioritize accident density
+result <- sero_optimal(data, 
+  weights = list(
+    accident_weight = 0.6,
+    population_weight = 0.2,
+    road_weight = 0.2
+  ))
+
+# Prioritize population density
+result <- sero_optimal(data, 
+  weights = list(
+    accident_weight = 0.2,
+    population_weight = 0.6,
+    road_weight = 0.2
+  ))
+```
+
+### Custom Scoring Functions
+
+Use built-in alternative scoring methods or create your own:
+
+```r
+# Exponential scoring (emphasizes high-accident areas)
+result <- sero_optimal(data, 
+  custom_scoring_function = sero_scoring_exponential)
+
+# Threshold-based scoring (minimum requirements)
+result <- sero_optimal(data, 
+  custom_scoring_function = sero_scoring_threshold)
+
+# Create your own scoring function
+my_scoring <- function(data) {
+  # Custom logic here
+  return(scores)
+}
+result <- sero_optimal(data, custom_scoring_function = my_scoring)
+```
+
+## Visualization Options
+
+### Accident Heatmaps
+
+Create continuous density visualizations:
+
+```r
+# Basic heatmap
+heatmap_basic <- sero_heatmap(data$accident)
+
+# High-resolution heatmap
+heatmap_detailed <- sero_heatmap(data$accident,
+                                bandwidth = 500,
+                                grid_size = 50,
+                                color_scheme = "plasma")
+
+# Heatmap with landuse context
+heatmap_context <- sero_heatmap(data$accident,
+                               data = data,
+                               show_landuse = TRUE,
+                               show_accidents = FALSE,
+                               color_scheme = "inferno")
+```
+
+### Color Schemes Available
+- **"viridis"**: Perceptually uniform (default)
+- **"plasma"**: High contrast, vibrant
+- **"inferno"**: Dark background, bright highlights  
+- **"magma"**: Purple-to-yellow gradient
 
 ## Data Requirements
 

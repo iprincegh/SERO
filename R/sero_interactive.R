@@ -20,7 +20,7 @@
 #' interactive_map <- sero_create_interactive_map(data, optimal_locs)
 #' interactive_map
 #' }
-sero_create_interactive_map <- function(data, optimal_locations, max_accidents = 100) {
+sero_map <- function(data, optimal_locations, max_accidents = 100) {
   
   # Check if plotly is available
   if (!requireNamespace("plotly", quietly = TRUE)) {
@@ -110,7 +110,7 @@ sero_create_interactive_map <- function(data, optimal_locations, max_accidents =
 #' @param max_distance Maximum distance in meters to search for accidents (default=1000)
 #' @return Selected accident as sf object or NULL if none found
 #' @export
-sero_select_accident_by_coords <- function(data, longitude, latitude, max_distance = 1000) {
+sero_select <- function(data, longitude, latitude, max_distance = 1000) {
   
   if (!"accident" %in% names(data)) {
     stop("Accident data not found in input data")
@@ -150,7 +150,7 @@ sero_select_accident_by_coords <- function(data, longitude, latitude, max_distan
 #' @param show_all_routes Logical, whether to show routes from all optimal locations (default=FALSE)
 #' @return sero_route_to_accident S3 object
 #' @export
-sero_route_to_selected_accident <- function(optimal_locations, selected_accident, show_all_routes = FALSE) {
+sero_route <- function(optimal_locations, selected_accident, show_all_routes = FALSE) {
   
   # Input validation
   if (!inherits(optimal_locations, "sero_optimal_locations")) {
@@ -369,7 +369,7 @@ print.sero_route_to_accident <- function(x, ...) {
 #'                                           longitude = 7.625, latitude = 51.962)
 #' plot(route)
 #' }
-sero_interactive_routing_workflow <- function(data, optimal_locations, longitude, latitude, show_all_routes = FALSE) {
+sero_workflow <- function(data, optimal_locations, longitude, latitude, show_all_routes = FALSE) {
   
   # Step 1: Select accident by coordinates
   selected_accident <- sero_select_accident_by_coords(data, longitude, latitude)
