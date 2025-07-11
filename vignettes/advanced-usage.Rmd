@@ -1,0 +1,334 @@
+---
+title: "Advanced SERO: Parameter Optimization and Custom Analysis"
+author: "Prince Oppong Boakye"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Advanced SERO: Parameter Optimization and Custom Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Introduction
+
+This vignette demonstrates advanced usage of the SERO package, including parameter optimization, sensitivity analysis, and custom analysis workflows for different scenarios.
+
+```{r setup}
+library(SERO)
+```
+
+## Parameter Sensitivity Analysis
+
+### Buffer Size Sensitivity for Hotspot Detection
+
+```{r}
+# Load data
+data <- sero_load_data()
+
+# Test different buffer sizes
+buffer_values <- c(300, 500, 800, 1000, 1200, 1500)
+buffer_results <- data.frame(
+  buffer = buffer_values,
+  hotspots = integer(length(buffer_values)),
+  max_density = numeric(length(buffer_values))
+)
+
+for (i in seq_along(buffer_values)) {
+  result <- sero_identify_hotspots(data$accident, buffer = buffer_values[i])
+  buffer_results$hotspots[i] <- nrow(result$hotspots)
+  if (nrow(result$hotspots) > 0) {
+    buffer_results$max_density[i] <- max(result$hotspots$density, na.rm = TRUE)
+  }
+}
+
+print(buffer_results)
+```
+
+### Weight Sensitivity for Optimal Locations
+
+```{r}
+# Test different weight combinations
+weight_scenarios <- list(
+  "Accident-focused" = list(
+    weight_accidents = 0.6, weight_population = 0.15, weight_roads = 0.1,
+    weight_landuse = 0.05, weight_distance = 0.05, weight_distribution = 0.05
+  ),
+  "Population-focused" = list(
+    weight_accidents = 0.2, weight_population = 0.5, weight_roads = 0.15,
+    weight_landuse = 0.05, weight_distance = 0.05, weight_distribution = 0.05
+  ),
+  "Balanced" = list(
+    weight_accidents = 0.3, weight_population = 0.25, weight_roads = 0.2,
+    weight_landuse = 0.1, weight_distance = 0.1, weight_distribution = 0.05
+  )
+)
+
+weight_results <- data.frame(
+  scenario = names(weight_scenarios),
+  locations = integer(length(weight_scenarios)),
+  avg_score = numeric(length(weight_scenarios))
+)
+
+for (i in seq_along(weight_scenarios)) {
+  params <- weight_scenarios[[i]]
+  result <- do.call(sero_calculate_optimal_locations, c(list(data = data, max_locations = 5), params))
+  weight_results$locations[i] <- nrow(result$locations)
+  if (nrow(result$locations) > 0) {
+    weight_results$avg_score[i] <- mean(result$locations$total_score, na.rm = TRUE)
+  }
+}
+
+print(weight_results)
+```
+
+## Scenario-Based Analysis
+
+### Urban Dense Area Analysis
+
+```{r}
+# Parameters optimized for dense urban areas
+urban_analysis <- sero_analyze(
+  risk_categories = c(1, 2),
+  max_locations = 8,        # More locations for dense coverage
+  max_routes = 15
+)
+
+# Custom hotspot analysis for urban areas
+urban_hotspots <- sero_identify_hotspots(
+  data$accident,
+  buffer = 600,             # Smaller buffer for precise urban hotspots
+  min_events = 3            # Lower threshold due to higher density
+)
+
+cat("Urban Analysis Results:\n")
+cat("- Hotspots identified:", nrow(urban_hotspots$hotspots), "\n")
+cat("- Optimal locations:", nrow(urban_analysis$locations$locations), "\n")
+cat("- Routes calculated:", nrow(urban_analysis$routes$routes), "\n")
+```
+
+### Rural/Suburban Area Analysis
+
+```{r}
+# Parameters optimized for rural/suburban areas
+suburban_hotspots <- sero_identify_hotspots(
+  data$accident,
+  buffer = 1500,            # Larger buffer for broader coverage
+  min_events = 6            # Higher threshold for significance
+)
+
+suburban_locations <- sero_calculate_optimal_locations(
+  data,
+  max_locations = 4,        # Fewer locations for broader coverage
+  weight_accidents = 0.4,
+  weight_population = 0.15,
+  weight_roads = 0.25,      # Higher weight on road accessibility
+  weight_landuse = 0.1,
+  weight_distance = 0.05,
+  weight_distribution = 0.05
+)
+
+cat("Suburban Analysis Results:\n")
+cat("- Hotspots identified:", nrow(suburban_hotspots$hotspots), "\n")
+cat("- Optimal locations:", nrow(suburban_locations$locations), "\n")
+```
+
+## Multi-Criteria Decision Analysis
+
+### Understanding Criteria Weights
+
+```{r}
+# Demonstrate the impact of different criteria
+criteria_tests <- list(
+  "Equal weights" = list(
+    weight_accidents = 1/6, weight_population = 1/6, weight_roads = 1/6,
+    weight_landuse = 1/6, weight_distance = 1/6, weight_distribution = 1/6
+  ),
+  "Safety-focused" = list(
+    weight_accidents = 0.5, weight_population = 0.1, weight_roads = 0.15,
+    weight_landuse = 0.1, weight_distance = 0.1, weight_distribution = 0.05
+  ),
+  "Coverage-focused" = list(
+    weight_accidents = 0.2, weight_population = 0.4, weight_roads = 0.1,
+    weight_landuse = 0.05, weight_distance = 0.05, weight_distribution = 0.2
+  )
+)
+
+for (scenario_name in names(criteria_tests)) {
+  cat("\n", scenario_name, ":\n")
+  params <- criteria_tests[[scenario_name]]
+  result <- do.call(sero_calculate_optimal_locations, c(list(data = data, max_locations = 3), params))
+  
+  if (nrow(result$locations) > 0) {
+    cat("- Locations found:", nrow(result$locations), "\n")
+    cat("- Average total score:", round(mean(result$locations$total_score), 3), "\n")
+    cat("- Score range:", round(min(result$locations$total_score), 3), "-", 
+        round(max(result$locations$total_score), 3), "\n")
+  }
+}
+```
+
+## Custom Analysis Workflows
+
+### Emergency Response Time Analysis
+
+```{r}
+# Calculate comprehensive response analysis
+optimal_locs <- sero_calculate_optimal_locations(data, max_locations = 5)
+all_routes <- sero_calculate_routes(optimal_locs, data$accident, max_routes = 50)
+
+# Analyze response times
+response_stats <- list(
+  mean_time = mean(all_routes$routes$estimated_time),
+  median_time = median(all_routes$routes$estimated_time),
+  max_time = max(all_routes$routes$estimated_time),
+  under_5min = sum(all_routes$routes$estimated_time <= 5),
+  under_10min = sum(all_routes$routes$estimated_time <= 10)
+)
+
+cat("Response Time Analysis:\n")
+cat("- Mean response time:", round(response_stats$mean_time, 1), "minutes\n")
+cat("- Median response time:", round(response_stats$median_time, 1), "minutes\n")
+cat("- Maximum response time:", round(response_stats$max_time, 1), "minutes\n")
+cat("- Accidents reachable in ≤5 min:", response_stats$under_5min, "\n")
+cat("- Accidents reachable in ≤10 min:", response_stats$under_10min, "\n")
+```
+
+### Coverage Analysis by Accident Severity
+
+```{r}
+# Analyze coverage for different accident severities
+if ("UKATEGORIE" %in% names(data$accident)) {
+  severity_analysis <- data.frame(
+    severity = c("Fatal", "Serious", "Light"),
+    category = c(1, 2, 3),
+    count = c(
+      sum(data$accident$UKATEGORIE == 1, na.rm = TRUE),
+      sum(data$accident$UKATEGORIE == 2, na.rm = TRUE),
+      sum(data$accident$UKATEGORIE == 3, na.rm = TRUE)
+    )
+  )
+  
+  print(severity_analysis)
+  
+  # Calculate average response time by severity
+  if (nrow(all_routes$routes) > 0) {
+    for (sev in 1:3) {
+      sev_accidents <- which(data$accident$UKATEGORIE == sev)
+      sev_routes <- all_routes$routes[all_routes$routes$accident_id %in% sev_accidents[1:min(length(sev_accidents), nrow(all_routes$routes))], ]
+      
+      if (nrow(sev_routes) > 0) {
+        cat("Severity", sev, "average response time:", 
+            round(mean(sev_routes$estimated_time), 1), "minutes\n")
+      }
+    }
+  }
+}
+```
+
+## Performance Optimization
+
+### Grid Size vs. Computation Time
+
+```{r}
+# Test different grid sizes for optimal location calculation
+grid_sizes <- c(100, 150, 200, 250)
+grid_performance <- data.frame(
+  grid_size = grid_sizes,
+  locations = integer(length(grid_sizes)),
+  computation_time = numeric(length(grid_sizes))
+)
+
+for (i in seq_along(grid_sizes)) {
+  start_time <- Sys.time()
+  
+  # Run with different grid sizes (if this parameter exists)
+  result <- sero_calculate_optimal_locations(
+    data,
+    max_locations = 3
+  )
+  
+  end_time <- Sys.time()
+  
+  grid_performance$locations[i] <- nrow(result$locations)
+  grid_performance$computation_time[i] <- as.numeric(difftime(end_time, start_time, units = "secs"))
+}
+
+print(grid_performance)
+```
+
+## Quality Assessment
+
+### Validation Metrics
+
+```{r}
+# Calculate validation metrics for optimal locations
+hotspots <- sero_identify_hotspots(data$accident)
+optimal_locs <- sero_calculate_optimal_locations(data, max_locations = 5)
+
+if (nrow(hotspots$hotspots) > 0 && nrow(optimal_locs$locations) > 0) {
+  # Calculate distances from optimal locations to hotspots
+  hotspot_distances <- sf::st_distance(
+    sf::st_transform(optimal_locs$locations, 32632),
+    sf::st_transform(hotspots$hotspots, 32632)
+  )
+  
+  # Minimum distance from each hotspot to nearest service location
+  min_distances_to_hotspots <- apply(hotspot_distances, 2, min)
+  
+  cat("Quality Assessment:\n")
+  cat("- Hotspots within 2km of service:", sum(min_distances_to_hotspots <= 2000), "/", length(min_distances_to_hotspots), "\n")
+  cat("- Average distance to nearest service:", round(mean(min_distances_to_hotspots)), "meters\n")
+  cat("- Maximum distance to service:", round(max(min_distances_to_hotspots)), "meters\n")
+}
+```
+
+## Best Practices and Recommendations
+
+### Parameter Selection Guidelines
+
+1. **Buffer Size for Hotspots**:
+   - Urban areas: 500-800m
+   - Suburban areas: 800-1200m
+   - Rural areas: 1200-2000m
+
+2. **Multi-Criteria Weights**:
+   - Safety-focused: High accident weight (0.4-0.6)
+   - Coverage-focused: High population weight (0.3-0.5)
+   - Balanced approach: More even distribution
+
+3. **Number of Locations**:
+   - Consider area size, population density, and budget constraints
+   - Start with 3-5 locations and adjust based on coverage analysis
+
+### Validation Steps
+
+```{r}
+# Validation workflow
+cat("Recommended Validation Steps:\n")
+cat("1. Check data quality and completeness\n")
+cat("2. Validate hotspot identification with domain experts\n")
+cat("3. Test different parameter combinations\n")
+cat("4. Assess coverage of high-risk areas\n")
+cat("5. Evaluate response time distributions\n")
+cat("6. Consider real-world constraints (budget, infrastructure)\n")
+```
+
+## Conclusion
+
+This advanced vignette demonstrates the flexibility and power of the SERO package for customized spatial emergency response optimization. Key takeaways:
+
+- Parameter sensitivity analysis helps optimize results for specific scenarios
+- Different weight combinations produce solutions tailored to specific objectives
+- Validation metrics ensure solution quality and practical applicability
+- Performance considerations help balance accuracy with computational efficiency
+
+For additional examples and use cases, explore the package's example scripts in `inst/examples/`.

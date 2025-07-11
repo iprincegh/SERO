@@ -1,0 +1,262 @@
+---
+title: "Introduction to SERO: Spatial Emergency Response Optimization"
+author: "Prince Oppong Boakye"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to SERO: Spatial Emergency Response Optimization}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Introduction
+
+SERO (Spatial Emergency Response Optimization) is an R package designed for spatial analysis and optimization of emergency response services. This package provides comprehensive tools for:
+
+- **Hotspot Analysis**: Identifying accident hotspots using point pattern analysis
+- **Optimal Location Calculation**: Multi-criteria analysis for emergency service placement
+- **Route Planning**: Calculating fastest routes to accident scenes
+- **Interactive Mapping**: Real-time accident selection and route calculation
+
+## Installation
+
+```{r eval=FALSE}
+# Install from GitHub
+devtools::install_github("iprincegh/SERO")
+```
+
+```{r setup}
+library(SERO)
+```
+
+## Built-in Data
+
+SERO includes comprehensive spatial datasets for Münster, Germany:
+
+```{r}
+# Load built-in data
+data <- sero_load_data()
+
+# Explore the data structure
+names(data)
+```
+
+```{r}
+# Data summary
+cat("Accidents:", nrow(data$accident), "\n")
+cat("Population grid cells:", nrow(data$population), "\n")
+cat("Road segments:", nrow(data$roads), "\n")
+cat("Land use polygons:", nrow(data$landuse), "\n")
+cat("Districts:", nrow(data$districts), "\n")
+```
+
+## Basic Workflow
+
+### 1. Identify Accident Hotspots
+
+```{r}
+# Identify hotspots using point pattern analysis
+hotspots <- sero_identify_hotspots(
+  data$accident,
+  risk_categories = c(1, 2),  # Fatal and serious accidents
+  buffer = 1000,              # 1km buffer for density estimation
+  min_events = 5              # Minimum 5 accidents per hotspot
+)
+
+print(hotspots)
+```
+
+```{r, fig.cap="Accident hotspots visualization"}
+plot(hotspots)
+```
+
+### 2. Calculate Optimal Service Locations
+
+The package uses 6 multi-criteria analysis criteria:
+
+1. **Accident density proximity**
+2. **Population density coverage**
+3. **Road network accessibility**
+4. **Land use compatibility**
+5. **Distance from existing services**
+6. **Spatial distribution balance**
+
+```{r}
+# Calculate optimal locations
+optimal_locations <- sero_calculate_optimal_locations(
+  data,
+  max_locations = 3,
+  weight_accidents = 0.4,
+  weight_population = 0.2,
+  weight_roads = 0.15,
+  weight_landuse = 0.1,
+  weight_distance = 0.1,
+  weight_distribution = 0.05
+)
+
+print(optimal_locations)
+```
+
+```{r, fig.cap="Optimal emergency service locations"}
+plot(optimal_locations)
+```
+
+### 3. Calculate Emergency Routes
+
+```{r}
+# Calculate routes from service locations to accidents
+routes <- sero_calculate_routes(
+  optimal_locations, 
+  data$accident, 
+  max_routes = 10
+)
+
+print(routes)
+```
+
+```{r, fig.cap="Emergency response routes"}
+plot(routes)
+```
+
+## Complete Analysis Workflow
+
+For convenience, SERO provides a complete analysis function:
+
+```{r}
+# Complete analysis with default parameters
+analysis <- sero_analyze(
+  risk_categories = c(1, 2),
+  max_locations = 3,
+  max_routes = 10
+)
+
+print(analysis)
+```
+
+## Interactive Features
+
+SERO includes interactive mapping capabilities (requires plotly):
+
+```{r eval=FALSE}
+# Create interactive map for accident selection
+interactive_map <- sero_create_interactive_map(data, optimal_locations)
+interactive_map
+
+# Select accident by coordinates and calculate route
+route <- sero_interactive_routing_workflow(
+  data, 
+  optimal_locations, 
+  longitude = 7.625, 
+  latitude = 51.962
+)
+plot(route)
+```
+
+## Advanced Parameter Customization
+
+### Hotspot Analysis Parameters
+
+```{r}
+# Fine-tuned hotspot analysis
+precise_hotspots <- sero_identify_hotspots(
+  data$accident,
+  risk_categories = c(1, 2),
+  buffer = 500,     # Smaller buffer for precise hotspots
+  min_events = 3    # Lower threshold for more hotspots
+)
+
+broad_hotspots <- sero_identify_hotspots(
+  data$accident,
+  risk_categories = c(1, 2),
+  buffer = 1500,    # Larger buffer for regional hotspots
+  min_events = 8    # Higher threshold for fewer, stronger hotspots
+)
+
+cat("Precise hotspots:", nrow(precise_hotspots$hotspots), "\n")
+cat("Broad hotspots:", nrow(broad_hotspots$hotspots), "\n")
+```
+
+### Multi-Criteria Weight Optimization
+
+```{r}
+# Accident-focused optimization
+accident_focused <- sero_calculate_optimal_locations(
+  data,
+  max_locations = 5,
+  weight_accidents = 0.6,    # High weight on accident proximity
+  weight_population = 0.15,
+  weight_roads = 0.1,
+  weight_landuse = 0.05,
+  weight_distance = 0.05,
+  weight_distribution = 0.05
+)
+
+# Population-focused optimization
+population_focused <- sero_calculate_optimal_locations(
+  data,
+  max_locations = 5,
+  weight_accidents = 0.2,
+  weight_population = 0.5,   # High weight on population coverage
+  weight_roads = 0.15,
+  weight_landuse = 0.05,
+  weight_distance = 0.05,
+  weight_distribution = 0.05
+)
+
+cat("Accident-focused locations:", nrow(accident_focused$locations), "\n")
+cat("Population-focused locations:", nrow(population_focused$locations), "\n")
+```
+
+## Visualization Functions
+
+SERO provides specialized visualization functions:
+
+```{r, fig.cap="Accident locations by severity"}
+sero_plot_accidents(data, color_by_severity = TRUE)
+```
+
+```{r, fig.cap="Population density visualization"}
+sero_plot_population(data)
+```
+
+```{r, fig.cap="Road network visualization"}
+sero_plot_roads(data)
+```
+
+```{r, fig.cap="Combined spatial analysis visualization"}
+sero_plot_combined(data, hotspots, optimal_locations)
+```
+
+## Summary
+
+SERO provides a comprehensive toolkit for spatial emergency response optimization:
+
+- **Easy to use**: Simple functions with sensible defaults
+- **Flexible**: Extensive parameter customization options
+- **Interactive**: Real-time mapping and selection capabilities
+- **Well-documented**: Comprehensive examples and documentation
+- **Standards-compliant**: Follows R spatial best practices
+
+The package is particularly useful for:
+
+- Urban planners optimizing emergency service placement
+- Emergency response coordinators analyzing coverage
+- Researchers studying spatial accessibility
+- Students learning spatial analysis techniques
+
+For more examples and advanced usage, see the package examples in `inst/examples/`.
+
+## References
+
+- Bivand, R., Pebesma, E., & Gómez-Rubio, V. (2013). Applied spatial data analysis with R. Springer.
+- Pebesma, E. (2018). Simple Features for R: Standardized Support for Spatial Vector Data. The R Journal.
+- Baddeley, A., Rubak, E., & Turner, R. (2015). Spatial Point Patterns: Methodology and Applications with R. CRC Press.
