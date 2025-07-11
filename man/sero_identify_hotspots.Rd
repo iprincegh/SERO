@@ -7,7 +7,7 @@
 sero_identify_hotspots(
   accidents,
   risk_categories = c(1, 2),
-  bandwidth = 1000,
+  buffer = 1000,
   min_events = 5
 )
 }
@@ -16,7 +16,7 @@ sero_identify_hotspots(
 
 \item{risk_categories}{High-risk accident categories (default=c(1,2): 1=fatal, 2=serious)}
 
-\item{bandwidth}{Kernel bandwidth for density estimation in meters (default=1000)}
+\item{buffer}{Kernel buffer distance for density estimation in meters (default=1000)}
 
 \item{min_events}{Minimum number of events for hotspot identification (default=5)}
 }

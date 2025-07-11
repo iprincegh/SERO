@@ -293,7 +293,7 @@ cat("Example 1: Analyzing fatal accidents only...\n")
 fatal_hotspots <- sero_identify_hotspots(
   data$accident,
   risk_categories = c(1),  # Fatal only
-  bandwidth = 800,
+  buffer = 800,
   min_events = 2
 )
 cat("Fatal accident hotspots:", nrow(fatal_hotspots$hotspots), "\n")

@@ -35,7 +35,7 @@ cat("- min_road_distance: 200-400m - Close to roads for accessibility\n")
 cat("- max_road_distance: 600-800m - Avoid congestion\n")
 cat("- grid_size: 50-75m - Fine grid for detailed analysis\n")
 cat("- max_locations: 10-15 - Multiple locations for coverage\n")
-cat("- bandwidth: 500-800m - Precise hotspots\n")
+cat("- buffer: 500-800m - Precise hotspots\n")
 
 urban_params <- list(
   risk_categories = c(1, 2),
@@ -44,14 +44,14 @@ urban_params <- list(
   max_road_distance = 700,
   grid_size = 50,
   max_locations = 12,
-  bandwidth = 600
+  buffer = 600
 )
 
 cat("Running urban scenario analysis...\n")
 urban_hotspots <- sero_identify_hotspots(
   data$accident,
   risk_categories = urban_params$risk_categories,
-  bandwidth = urban_params$bandwidth
+  buffer = urban_params$buffer
 )
 
 urban_locations <- sero_compute_optimal_locations(
@@ -78,7 +78,7 @@ cat("- min_road_distance: 500-800m - Further from roads (less congestion)\n")
 cat("- max_road_distance: 1200-2000m - Larger buffer for sparse areas\n")
 cat("- grid_size: 150-200m - Coarser grid for regional analysis\n")
 cat("- max_locations: 5-8 - Fewer strategic locations\n")
-cat("- bandwidth: 1200-2000m - Broader hotspots\n")
+cat("- buffer: 1200-2000m - Broader hotspots\n")
 
 rural_params <- list(
   risk_categories = c(1, 2, 3),
@@ -87,14 +87,14 @@ rural_params <- list(
   max_road_distance = 1500,
   grid_size = 150,
   max_locations = 6,
-  bandwidth = 1500
+  buffer = 1500
 )
 
 cat("Running rural scenario analysis...\n")
 rural_hotspots <- sero_identify_hotspots(
   data$accident,
   risk_categories = rural_params$risk_categories,
-  bandwidth = rural_params$bandwidth
+  buffer = rural_params$buffer
 )
 
 rural_locations <- sero_compute_optimal_locations(
@@ -121,7 +121,7 @@ cat("- min_road_distance: 800-1000m - Away from congestion\n")
 cat("- max_road_distance: 1500-2000m - Larger buffer\n")
 cat("- grid_size: 100-150m - Medium grid for industrial areas\n")
 cat("- max_locations: 4-6 - Fewer strategic locations\n")
-cat("- bandwidth: 1000-1500m - Medium to broad hotspots\n")
+cat("- buffer: 1000-1500m - Medium to broad hotspots\n")
 
 industrial_params <- list(
   risk_categories = c(1, 2),
@@ -130,14 +130,14 @@ industrial_params <- list(
   max_road_distance = 1500,
   grid_size = 125,
   max_locations = 5,
-  bandwidth = 1200
+  buffer = 1200
 )
 
 cat("Running industrial scenario analysis...\n")
 industrial_hotspots <- sero_identify_hotspots(
   data$accident,
   risk_categories = industrial_params$risk_categories,
-  bandwidth = industrial_params$bandwidth
+  buffer = industrial_params$buffer
 )
 
 industrial_locations <- sero_compute_optimal_locations(
@@ -160,25 +160,25 @@ cat("- Optimal locations:", nrow(industrial_locations$locations), "\n")
 
 cat("\n=== Parameter Sensitivity Analysis ===\n")
 
-# Test bandwidth sensitivity
-cat("\nTesting bandwidth sensitivity (hotspot precision):\n")
-bandwidth_values <- c(300, 500, 800, 1000, 1200, 1500)
-bandwidth_results <- data.frame(
-  bandwidth = bandwidth_values,
-  hotspots = integer(length(bandwidth_values)),
-  max_density = numeric(length(bandwidth_values))
+# Test buffer sensitivity
+cat("\nTesting buffer sensitivity (hotspot precision):\n")
+buffer_values <- c(300, 500, 800, 1000, 1200, 1500)
+buffer_results <- data.frame(
+  buffer = buffer_values,
+  hotspots = integer(length(buffer_values)),
+  max_density = numeric(length(buffer_values))
 )
 
-for (i in seq_along(bandwidth_values)) {
-  bw <- bandwidth_values[i]
-  result <- sero_identify_hotspots(data$accident, bandwidth = bw)
-  bandwidth_results$hotspots[i] <- nrow(result$hotspots)
+for (i in seq_along(buffer_values)) {
+  buf <- buffer_values[i]
+  result <- sero_identify_hotspots(data$accident, buffer = buf)
+  buffer_results$hotspots[i] <- nrow(result$hotspots)
   if (nrow(result$hotspots) > 0 && "density" %in% names(result$hotspots)) {
-    bandwidth_results$max_density[i] <- max(result$hotspots$density, na.rm = TRUE)
+    buffer_results$max_density[i] <- max(result$hotspots$density, na.rm = TRUE)
   }
 }
 
-print(bandwidth_results)
+print(buffer_results)
 
 # Test grid size sensitivity
 cat("\nTesting grid size sensitivity (location precision):\n")

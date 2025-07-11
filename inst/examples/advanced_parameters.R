@@ -46,7 +46,7 @@ cat("\nAnalyzing fatal accidents only (UKATEGORIE = 1):\n")
 hotspots_fatal <- sero_identify_hotspots(
   data$accident, 
   risk_categories = c(1),  # Fatal only
-  bandwidth = 800,         # Smaller bandwidth for more precise hotspots
+  buffer = 800,         # Smaller buffer for more precise hotspots
   min_events = 3           # Lower threshold for sparse fatal accidents
 )
 print(hotspots_fatal)
@@ -56,7 +56,7 @@ cat("\nAnalyzing all accident types (UKATEGORIE = 1, 2, 3):\n")
 hotspots_all <- sero_identify_hotspots(
   data$accident, 
   risk_categories = c(1, 2, 3),  # All categories
-  bandwidth = 1200,              # Larger bandwidth for broader analysis
+  buffer = 1200,              # Larger buffer for broader analysis
   min_events = 10                # Higher threshold for all accidents
 )
 print(hotspots_all)

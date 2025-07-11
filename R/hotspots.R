@@ -5,7 +5,7 @@
 #'
 #' @param accidents sf object with accident data (must have UKATEGORIE column)
 #' @param risk_categories High-risk accident categories (default=c(1,2): 1=fatal, 2=serious)
-#' @param bandwidth Kernel bandwidth for density estimation in meters (default=1000)
+#' @param buffer Kernel buffer distance for density estimation in meters (default=1000)
 #' @param min_events Minimum number of events for hotspot identification (default=5)
 #' @return sero_hotspots S3 object
 #' @export
@@ -17,7 +17,7 @@
 #' }
 sero_identify_hotspots <- function(accidents, 
                                    risk_categories = c(1, 2),
-                                   bandwidth = 1000,
+                                   buffer = 1000,
                                    min_events = 5) {
   
   # Input validation
@@ -57,7 +57,7 @@ sero_identify_hotspots <- function(accidents,
                                marks = high_risk_accidents$UKATEGORIE)
   
   # Calculate kernel density
-  density_est <- spatstat.explore::density.ppp(ppp_obj, sigma = bandwidth)
+  density_est <- spatstat.explore::density.ppp(ppp_obj, sigma = buffer)
   
   # Convert density to dataframe and find peaks
   density_df <- as.data.frame(density_est)
@@ -68,7 +68,7 @@ sero_identify_hotspots <- function(accidents,
   }
   
   # Find local maxima using a simple approach
-  # Sort by density and take top locations that are separated by bandwidth
+  # Sort by density and take top locations that are separated by buffer
   density_df <- density_df[order(density_df$value, decreasing = TRUE), ]
   
   # Select hotspot locations
@@ -81,7 +81,7 @@ sero_identify_hotspots <- function(accidents,
       # Check if candidate is far enough from existing hotspots
       distances <- sqrt((hotspot_locations$x - candidate$x)^2 + 
                        (hotspot_locations$y - candidate$y)^2)
-      if (all(distances > bandwidth/2)) {
+      if (all(distances > buffer/2)) {
         hotspot_locations <- rbind(hotspot_locations, candidate)
       }
     }
@@ -103,7 +103,7 @@ sero_identify_hotspots <- function(accidents,
   )
   
   # Count nearby accidents for each hotspot
-  hotspot_buffers <- sf::st_buffer(hotspots, bandwidth)
+  hotspot_buffers <- sf::st_buffer(hotspots, buffer)
   accident_counts <- sf::st_intersects(hotspot_buffers, high_risk_accidents)
   
   hotspots$accident_count <- lengths(accident_counts)
@@ -142,7 +142,7 @@ sero_identify_hotspots <- function(accidents,
       accidents = high_risk_accidents,
       parameters = list(
         risk_categories = risk_categories,
-        bandwidth = bandwidth,
+        buffer = buffer,
         min_events = min_events
       ),
       summary = summary_stats,
@@ -241,7 +241,7 @@ print.sero_hotspots <- function(x, ...) {
   
   cat("Parameters:\n")
   cat("- Risk categories:", paste(x$parameters$risk_categories, collapse = ", "), "\n")
-  cat("- Bandwidth:", x$parameters$bandwidth, "meters\n")
+  cat("- Buffer:", x$parameters$buffer, "meters\n")
   cat("- Minimum events:", x$parameters$min_events, "\n\n")
   
   if (x$summary$hotspot_count > 0) {

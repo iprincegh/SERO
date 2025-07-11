@@ -51,24 +51,24 @@ cat("Parameters: Default settings\n")
 hotspots_basic <- sero_identify_hotspots(data$accident)
 print(hotspots_basic)
 
-# Example 2.2: Custom bandwidth analysis
-cat("\nExample 2.2: Custom bandwidth analysis\n")
-cat("Parameters: bandwidth = 500m (smaller for precise hotspots)\n")
+# Example 2.2: Custom buffer analysis
+cat("\nExample 2.2: Custom buffer analysis\n")
+cat("Parameters: buffer = 500m (smaller for precise hotspots)\n")
 hotspots_precise <- sero_identify_hotspots(
   data$accident,
   risk_categories = c(1, 2),
-  bandwidth = 500,        # Smaller bandwidth = more precise hotspots
+  buffer = 500,        # Smaller buffer = more precise hotspots
   min_events = 3          # Lower threshold for sparse areas
 )
 print(hotspots_precise)
 
 # Example 2.3: Broader area analysis
 cat("\nExample 2.3: Broader area analysis\n")
-cat("Parameters: bandwidth = 1500m (larger for regional hotspots)\n")
+cat("Parameters: buffer = 1500m (larger for regional hotspots)\n")
 hotspots_broad <- sero_identify_hotspots(
   data$accident,
   risk_categories = c(1, 2),
-  bandwidth = 1500,       # Larger bandwidth = broader hotspots
+  buffer = 1500,       # Larger buffer = broader hotspots
   min_events = 8          # Higher threshold for significance
 )
 print(hotspots_broad)
@@ -79,7 +79,7 @@ cat("Parameters: risk_categories = c(1) (fatal accidents only)\n")
 hotspots_fatal <- sero_identify_hotspots(
   data$accident,
   risk_categories = c(1), # Fatal accidents only
-  bandwidth = 800,
+  buffer = 800,
   min_events = 2          # Lower threshold for rare events
 )
 print(hotspots_fatal)
@@ -297,14 +297,14 @@ cat("\nExample with all parameters specified:\n")
 cat("sero_identify_hotspots(\n")
 cat("  accidents = data$accident,\n")
 cat("  risk_categories = c(1, 2),\n")
-cat("  bandwidth = 1000,\n")
+cat("  buffer = 1000,\n")
 cat("  min_events = 5\n")
 cat(")\n")
 
 detailed_hotspots <- sero_identify_hotspots(
   accidents = data$accident,
   risk_categories = c(1, 2),
-  bandwidth = 1000,
+  buffer = 1000,
   min_events = 5
 )
 

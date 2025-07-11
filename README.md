@@ -141,7 +141,7 @@ If you use this package in your research, please cite:
 
 ```
 SERO: Spatial Emergency Response Optimization
-Authors: Prince Oppong Boakye, Samuel, Ahmad, Ahmed
+Authors: Prince Oppong Boakye
 Version: 0.1.0
-URL: https://github.com/your-username/SERO
+URL: https://github.com/iprincegh/SERO
 ```
