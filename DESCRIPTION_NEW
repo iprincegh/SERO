@@ -1,0 +1,32 @@
+Package: SERO
+Title: Spatial Emergency Response Optimization
+Version: 0.1.0
+Author: Prince Oppong Boakye <prynx44@gmail.com>
+Maintainer: Prince Oppong Boakye <prynx44@gmail.com>
+Authors@R: c(
+    person("Prince", "Oppong Boakye", email = "prynx44@gmail.com", role = c("aut", "cre"))
+    )
+Description: Spatial emergency response optimization.
+    Identifies accident hotspots using point pattern analysis, computes optimal 
+    emergency service locations using 6 multi-criteria analysis criteria, and 
+    calculates fastest routes to accident scenes. Uses R-spatial best practices 
+    with sf, ggplot2, and spatstat. Focuses exclusively on built-in data from 
+    inst/gpkg folder.
+License: MIT
+Encoding: UTF-8
+Imports:
+    sf (>= 1.0.0),
+    ggplot2 (>= 3.0.0),
+    spatstat (>= 3.0.0),
+    spatstat.geom (>= 3.0.0),
+    spatstat.explore (>= 3.0.0),
+    rlang (>= 0.4.0),
+    dplyr,
+    tools
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    plotly
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
