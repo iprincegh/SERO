@@ -21,12 +21,17 @@ Imports:
     spatstat.explore (>= 3.0.0),
     rlang (>= 0.4.0),
     utils,
-    RColorBrewer
+    RColorBrewer,
+    magrittr,
+    htmlwidgets
 Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    plotly
+    plotly,
+    shiny,
+    osrm,
+    leaflet
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2

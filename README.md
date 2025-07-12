@@ -8,6 +8,8 @@ A simple and focused R package for spatial emergency response optimization using
 - **Accident Heatmaps**: Continuous density visualization using kernel density estimation
 - **Multi-Criteria Optimization**: 6 specific criteria for optimal location computation
 - **Route Calculation**: Fastest routes to accident scenes
+- **Interactive Routing**: Click-to-simulate accidents with real road-based routing using OSRM
+- **Data Persistence**: Save/load optimal locations using GeoPackage format
 - **Built-in Data**: Uses only data from inst/gpkg folder
 - **R-Spatial Best Practices**: Uses sf, ggplot2, and spatstat
 
@@ -29,6 +31,9 @@ The package implements exactly 6 criteria for optimal emergency service location
 ```r
 # Install from source
 devtools::install_local("path/to/SERO")
+
+# For interactive routing features, install optional packages
+install.packages(c("shiny", "leaflet", "osrm"))
 ```
 
 ## Quick Start
@@ -46,6 +51,16 @@ print(results)
 plot(results$hotspots)   # Accident hotspots
 plot(results$locations)  # Optimal service locations
 plot(results$routes)     # Emergency routes
+
+# Interactive routing (requires leaflet, shiny, osrm packages)
+data <- sero_load_data()
+locations <- sero_optimal(data)
+
+# Option 1: Basic interactive map
+map <- sero_interactive_routing(data, locations)
+
+# Option 2: Full interactive app with OSRM routing
+sero_launch_interactive(locations$locations)
 ```
 
 ## Step-by-Step Analysis
@@ -161,6 +176,53 @@ heatmap_context <- sero_heatmap(data$accident,
 - **"inferno"**: Dark background, bright highlights  
 - **"magma"**: Purple-to-yellow gradient
 
+## Interactive Routing
+
+The SERO package includes comprehensive interactive routing capabilities using OSRM (OpenStreetMap Routing Machine).
+
+### Interactive Functions
+
+```r
+# Basic interactive map (requires leaflet)
+map <- sero_interactive_routing(data, locations)
+
+# Full interactive app with real routing (requires shiny, leaflet, osrm)
+sero_launch_interactive(locations$locations)
+
+# Single route calculation (requires osrm)
+route <- sero_route_osrm(51.9606, 7.6261, locations$locations)
+```
+
+### Features
+- **Click-to-simulate**: Click on map to simulate accident locations
+- **Real road routing**: Uses OSRM for actual road-based routes
+- **Nearest location**: Automatically finds closest optimal emergency location
+- **Route visualization**: Shows route, distance, and estimated time
+- **Background layers**: Optional display of roads, landuse, population data
+
+### OSRM Server Options
+- **Public server**: `http://router.project-osrm.org` (default, has usage limits)
+- **Custom server**: Set up your own OSRM server for production use
+
+```r
+# Using custom OSRM server
+sero_launch_interactive(locations$locations, 
+                       osrm_server = "http://your-osrm-server.com")
+```
+
+### Data Persistence
+
+```r
+# Save optimal locations for reuse
+sero_save_locations(locations, "emergency_locations.gpkg")
+
+# Load and use saved locations
+saved_locations <- sero_load_locations("emergency_locations.gpkg")
+sero_launch_interactive(saved_locations)
+```
+
+See `INTERACTIVE_ROUTING_GUIDE.md` for comprehensive documentation and setup instructions.
+
 ## Data Requirements
 
 The package uses built-in data from `inst/gpkg/dataset.gpkg` containing:
@@ -173,11 +235,17 @@ The package uses built-in data from `inst/gpkg/dataset.gpkg` containing:
 
 ## Dependencies
 
+### Core Dependencies
 - sf (>= 1.0.0)
 - ggplot2 (>= 3.0.0)
 - spatstat (>= 3.0.0)
 - spatstat.geom (>= 3.0.0)
 - spatstat.explore (>= 3.0.0)
+
+### Optional Dependencies (for interactive routing)
+- shiny (for interactive applications)
+- leaflet (for interactive maps)
+- osrm (for road-based routing)
 
 ## Methods
 
@@ -212,6 +280,13 @@ Implements exactly 6 criteria:
 - `sero_identify_hotspots()`: Point pattern analysis for accident hotspots
 - `sero_compute_optimal_locations()`: Multi-criteria optimal location computation
 - `sero_calculate_routes()`: Calculate fastest routes to accident scenes
+
+### Interactive Routing
+- `sero_interactive_routing()`: Basic interactive map with click functionality
+- `sero_launch_interactive()`: Full Shiny app with OSRM routing
+- `sero_route_osrm()`: Single route calculation using OSRM
+- `sero_save_locations()`: Save optimal locations to GeoPackage
+- `sero_load_locations()`: Load optimal locations from GeoPackage
 
 ### Visualization
 All functions include plot() methods using ggplot2 and sf
