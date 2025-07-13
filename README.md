@@ -1,9 +1,9 @@
-# SERO: Spatially Explicit Routing Optimization
+# SERO: Spatial Emergency Response Optimization
 
 [![R Package](https://img.shields.io/badge/R-Package-blue.svg)](https://www.r-project.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-SERO is an R package for spatially explicit routing optimization, designed to help researchers and practitioners analyze spatial data, identify hotspots, and optimize routing solutions for various applications.
+SERO is an R package for spatial emergency response optimization, designed to help researchers and practitioners analyze spatial data, identify hotspots, and optimize routing solutions for various applications.
 
 ## Features
 
@@ -162,7 +162,7 @@ For questions, issues, or support:
 If you use SERO in your research, please cite:
 
 ```
-SERO: Spatially Explicit Routing Optimization
+SERO: Spatial Emergency Response Optimization
 R Package Version 1.0.0
 https://github.com/iprincegh/SERO
 ```
