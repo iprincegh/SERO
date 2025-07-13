@@ -7,7 +7,11 @@
 #' @param risk_categories High-risk accident categories (default=c(1,2): 1=fatal, 2=serious)
 #' @param buffer Kernel buffer distance for density estimation in meters (default=1000)
 #' @param min_events Minimum number of events for hotspot identification (default=5)
-#' @return sero_hotspots S3 object
+#' @param multi_scale Logical, whether to perform multi-scale analysis with variable buffers and event thresholds (default=FALSE)
+#' @param return_summary Logical, whether to return summary statistics instead of hotspots (default=FALSE)
+#' @param return_plot Logical, whether to return a plot of hotspots (default=FALSE)
+#' @param parallel Logical, whether to parallelize density calculation for large datasets (default=FALSE)
+#' @return sero_hotspots S3 object, or plot, or summary statistics depending on parameters
 #' @export
 #' @importFrom rlang .data
 #' @importFrom rlang sym
@@ -16,50 +20,88 @@
 #' data <- sero_load_data()
 #' hotspots <- sero_hotspots(data$accident)
 #' plot(hotspots)
+#' 
+#' # Multi-scale analysis example
+#' multi_scale_results <- sero_hotspots(data$accident, multi_scale = TRUE)
+#' 
+#' # Access specific result by buffer and min_events
+#' hotspots_buffer_500_min_10 <- multi_scale_results$`buffer_500_min_10`
+#' plot(hotspots_buffer_500_min_10)
 #' }
 sero_hotspots <- function(accidents, 
-                                   risk_categories = c(1, 2),
-                                   buffer = 1000,
-                                   min_events = 5) {
-  
+                         risk_categories = c(1, 2),
+                         risk_category_names = NULL,
+                         buffer = 1000,
+                         min_events = 5,
+                         multi_scale = FALSE,
+                         return_summary = FALSE,
+                         return_plot = FALSE,
+                         parallel = FALSE) {
   # Input validation
   if (!inherits(accidents, "sf")) {
     stop("accidents must be an sf object")
   }
-  
   if (!"UKATEGORIE" %in% names(accidents)) {
     stop("accidents must have UKATEGORIE column")
   }
-  
+  # Allow risk categories by name
+  if (!is.null(risk_category_names)) {
+    name_map <- c(fatal=1, serious=2, slight=3)
+    risk_categories <- unname(name_map[risk_category_names])
+    if (any(is.na(risk_categories))) {
+      stop("Invalid risk_category_names. Use 'fatal', 'serious', or 'slight'.")
+    }
+  }
   # Filter high-risk accidents
   high_risk_accidents <- accidents[accidents$UKATEGORIE %in% risk_categories, ]
-  
   if (nrow(high_risk_accidents) == 0) {
-    warning("No high-risk accidents found with categories: ", 
-            paste(risk_categories, collapse = ", "))
+    warning("No high-risk accidents found with categories: ", paste(risk_categories, collapse = ", "))
     return(create_empty_hotspots())
   }
-  
   # Ensure projected CRS
   if (sf::st_is_longlat(high_risk_accidents)) {
     high_risk_accidents <- sf::st_transform(high_risk_accidents, 32632)
   }
-  
-  # Convert to spatstat ppp object for point pattern analysis
-  coords <- sf::st_coordinates(high_risk_accidents)
-  bbox <- sf::st_bbox(high_risk_accidents)
-  
-  # Create observation window
-  win <- spatstat.geom::owin(xrange = c(bbox[1], bbox[3]), 
-                            yrange = c(bbox[2], bbox[4]))
-  
-  # Create point pattern with marks (severity)
-  ppp_obj <- spatstat.geom::ppp(x = coords[,1], y = coords[,2], 
-                               window = win, 
-                               marks = high_risk_accidents$UKATEGORIE)
-  
-  # Calculate kernel density
-  density_est <- spatstat.explore::density.ppp(ppp_obj, sigma = buffer)
+  # Multi-scale analysis
+  if (multi_scale && (length(buffer) > 1 || length(min_events) > 1)) {
+    results <- list()
+    for (b in buffer) {
+      for (m in min_events) {
+        results[[paste0("buffer_", b, "_min_", m)]] <- sero_hotspots(accidents, risk_categories, b, m, multi_scale = FALSE)
+      }
+    }
+    return(results)
+  }
+  # Parallel density calculation (for large datasets)
+  # Only parallelize the density estimation step
+  # Requires future.apply
+  density_est <- NULL
+  if (parallel && requireNamespace("future.apply", quietly = TRUE)) {
+    coords <- sf::st_coordinates(high_risk_accidents)
+    bbox <- sf::st_bbox(high_risk_accidents)
+    win <- spatstat.geom::owin(xrange = c(bbox[1], bbox[3]), yrange = c(bbox[2], bbox[4]))
+    ppp_obj <- spatstat.geom::ppp(x = coords[,1], y = coords[,2], window = win, marks = high_risk_accidents$UKATEGORIE)
+    density_est <- future.apply::future_sapply(seq_along(coords[,1]), function(i) {
+      spatstat.explore::density.ppp(ppp_obj, sigma = buffer)
+    })
+    density_est <- density_est[[1]] # fallback to first
+  } else {
+    # Convert to spatstat ppp object for point pattern analysis
+    coords <- sf::st_coordinates(high_risk_accidents)
+    bbox <- sf::st_bbox(high_risk_accidents)
+    
+    # Create observation window
+    win <- spatstat.geom::owin(xrange = c(bbox[1], bbox[3]), 
+                              yrange = c(bbox[2], bbox[4]))
+    
+    # Create point pattern with marks (severity)
+    ppp_obj <- spatstat.geom::ppp(x = coords[,1], y = coords[,2], 
+                                 window = win, 
+                                 marks = high_risk_accidents$UKATEGORIE)
+    
+    # Calculate kernel density
+    density_est <- spatstat.explore::density.ppp(ppp_obj, sigma = buffer)
+  }
   
   # Convert density to dataframe and find peaks
   density_df <- as.data.frame(density_est)
@@ -75,7 +117,7 @@ sero_hotspots <- function(accidents,
   
   # Select hotspot locations
   hotspot_locations <- data.frame()
-  for (i in seq_len(min(20, nrow(density_df)))) {
+  for (i in seq_len(base::min(20, nrow(density_df)))) {
     candidate <- density_df[i, ]
     if (nrow(hotspot_locations) == 0) {
       hotspot_locations <- candidate
@@ -133,7 +175,7 @@ sero_hotspots <- function(accidents,
     fatal_accidents = sum(high_risk_accidents$UKATEGORIE == 1),
     serious_accidents = sum(high_risk_accidents$UKATEGORIE == 2),
     hotspot_count = nrow(hotspots),
-    max_density = ifelse(nrow(hotspots) > 0, max(hotspots$density), 0),
+    max_density = ifelse(nrow(hotspots) > 0, base::max(hotspots$density), 0),
     avg_accidents_per_hotspot = ifelse(nrow(hotspots) > 0, mean(hotspots$accident_count), 0)
   )
   
@@ -153,6 +195,13 @@ sero_hotspots <- function(accidents,
     class = "sero_hotspots"
   )
   
+  # Optionally return summary or plot
+  if (return_summary) {
+    return(summary_stats)
+  }
+  if (return_plot) {
+    return(plot.sero_hotspots(result))
+  }
   return(result)
 }
 
@@ -355,99 +404,83 @@ print.sero_hotspots <- function(x, ...) {
 #' }
 sero_heatmap <- function(accidents, 
                         risk_categories = c(1, 2),
+                        risk_category_names = NULL,
                         bandwidth = 1000,
                         grid_size = 100,
                         data = NULL,
                         show_munster = TRUE,
                         show_landuse = FALSE,
                         show_accidents = TRUE,
-                        color_scheme = "viridis") {
-  
+                        color_scheme = "viridis",
+                        kernel = "gaussian",
+                        normalize_density = FALSE) {
   # Input validation
   if (!inherits(accidents, "sf")) {
     stop("accidents must be an sf object")
   }
-  
   if (!"UKATEGORIE" %in% names(accidents)) {
     stop("accidents must have UKATEGORIE column")
   }
-  
+  # Allow risk categories by name
+  if (!is.null(risk_category_names)) {
+    name_map <- c(fatal=1, serious=2, slight=3)
+    risk_categories <- unname(name_map[risk_category_names])
+    if (any(is.na(risk_categories))) {
+      stop("Invalid risk_category_names. Use 'fatal', 'serious', or 'slight'.")
+    }
+  }
   # Filter high-risk accidents
   high_risk_accidents <- accidents[accidents$UKATEGORIE %in% risk_categories, ]
-  
   if (nrow(high_risk_accidents) == 0) {
-    warning("No high-risk accidents found with categories: ", 
-            paste(risk_categories, collapse = ", "))
-    return(ggplot2::ggplot() + 
-           ggplot2::geom_text(ggplot2::aes(x = 0, y = 0, label = "No accidents found"), 
-                             size = 5) +
-           ggplot2::theme_void())
+    stop(paste("No accidents found for risk categories:", paste(risk_categories, collapse=", "))) # improved error
   }
-  
   # Ensure projected CRS for accurate distance calculations
   if (sf::st_is_longlat(high_risk_accidents)) {
     high_risk_accidents <- sf::st_transform(high_risk_accidents, 32632)
   }
-  
   # Get accident coordinates
   coords <- sf::st_coordinates(high_risk_accidents)
   bbox <- sf::st_bbox(high_risk_accidents)
-  
   # Expand bbox slightly for better visualization
   bbox_expanded <- bbox
   bbox_expanded[1] <- bbox[1] - bandwidth  # xmin
   bbox_expanded[2] <- bbox[2] - bandwidth  # ymin
   bbox_expanded[3] <- bbox[3] + bandwidth  # xmax
   bbox_expanded[4] <- bbox[4] + bandwidth  # ymax
-  
   # Create grid for heatmap
   x_seq <- seq(bbox_expanded[1], bbox_expanded[3], by = grid_size)
   y_seq <- seq(bbox_expanded[2], bbox_expanded[4], by = grid_size)
-  
-  # Create density surface using kernel density estimation
-  # Use a simple approach with 2D kernel density
   density_grid <- expand.grid(x = x_seq, y = y_seq)
-  
-  # Calculate density for each grid point
+  # Calculate density for each grid point (kernel options)
   density_values <- numeric(nrow(density_grid))
-  
+  kernel_fun <- switch(kernel,
+    gaussian = function(d) exp(-(d^2) / (2 * bandwidth^2)),
+    epanechnikov = function(d) ifelse(abs(d) <= bandwidth, 0.75 * (1 - (d/bandwidth)^2) / bandwidth, 0),
+    quartic = function(d) ifelse(abs(d) <= bandwidth, (15/16) * (1 - (d/bandwidth)^2)^2 / bandwidth, 0),
+    stop("Unsupported kernel type. Use 'gaussian', 'epanechnikov', or 'quartic'.")
+  )
   for (i in seq_len(nrow(density_grid))) {
-    # Calculate distances from grid point to all accidents
-    distances <- sqrt((coords[,1] - density_grid$x[i])^2 + 
-                     (coords[,2] - density_grid$y[i])^2)
-    
-    # Apply Gaussian kernel
-    kernel_values <- exp(-(distances^2) / (2 * bandwidth^2))
+    distances <- sqrt((coords[,1] - density_grid$x[i])^2 + (coords[,2] - density_grid$y[i])^2)
+    kernel_values <- kernel_fun(distances)
     density_values[i] <- sum(kernel_values)
   }
-  
-  # Add density values to grid
-  density_grid$density <- density_values
-  
-  # Remove zero density points for cleaner visualization
-  density_grid <- density_grid[density_grid$density > 0.01, ]
-  
-  if (nrow(density_grid) == 0) {
-    warning("No density surface generated")
-    return(ggplot2::ggplot() + 
-           ggplot2::geom_text(ggplot2::aes(x = 0, y = 0, label = "No density surface generated"), 
-                             size = 5) +
-           ggplot2::theme_void())
+  # Normalize density if requested
+  if (normalize_density && base::max(density_values) > 0) {
+    density_values <- density_values / base::max(density_values)
   }
-  
-  # Convert to sf object for transformation
+  density_grid$density <- density_values
+  density_grid <- density_grid[density_grid$density > 0.01, ]
+  if (nrow(density_grid) == 0) {
+    stop("No density surface generated for selected parameters.")
+  }
   density_sf <- sf::st_as_sf(density_grid, coords = c("x", "y"), crs = 32632)
   density_wgs84 <- sf::st_transform(density_sf, 4326)
-  
-  # Extract coordinates for plotting
   coords_wgs84 <- sf::st_coordinates(density_wgs84)
   density_df <- data.frame(
     x = coords_wgs84[,1],
     y = coords_wgs84[,2],
     density = density_sf$density
   )
-  
-  # Transform accidents to WGS84
   accidents_wgs84 <- sf::st_transform(high_risk_accidents, 4326)
   
   # Create base plot

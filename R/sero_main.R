@@ -13,6 +13,7 @@
 #' 6. Centroid Calculation: ST_Centroid equivalent for grid cells
 #'
 #' @param risk_categories High-risk accident categories (default=c(1,2))
+#' @param risk_category_names High-risk accident category names (fatal, serious, slight) instead of codes
 #' @param suitable_landuse Suitable land use classes (default=c("residential", "commercial", "industrial"))
 #' @param max_locations Maximum number of service locations (default=10)
 #' @param max_routes Maximum number of routes to calculate (default=20)
@@ -26,12 +27,22 @@
 #' plot(results$routes)
 #' }
 sero_analyze <- function(risk_categories = c(1, 2), 
+                        risk_category_names = NULL,
                         suitable_landuse = c("residential", "commercial", "industrial"),
                         max_locations = 10, max_routes = 20) {
   
   # Load built-in data
   cat("Loading built-in spatial data...\n")
   data <- sero_load_data()
+  
+  # Allow risk categories by name
+  if (!is.null(risk_category_names)) {
+    name_map <- c(fatal=1, serious=2, slight=3)
+    risk_categories <- unname(name_map[risk_category_names])
+    if (any(is.na(risk_categories))) {
+      stop("Invalid risk_category_names. Use 'fatal', 'serious', or 'slight'.")
+    }
+  }
   
   # Step 1: Identify hotspots
   cat("Step 1: Identifying accident hotspots using point pattern analysis...\n")

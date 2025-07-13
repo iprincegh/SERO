@@ -21,8 +21,18 @@
 #' # With road-based routing
 #' routes_road <- sero_routes(locations, data$accident, use_roads = TRUE, data = data)
 #' }
-sero_routes <- function(locations, accidents, max_routes = 10, use_roads = FALSE, data = NULL) {
-  
+
+#' Calculate fastest routes to accident scenes (road-based only)
+#'
+#' Computes fastest routes from emergency service locations to accident scenes using road network only.
+#'
+#' @param locations sero_optimal_locations object or sf object with service locations
+#' @param accidents sf object with accident locations
+#' @param max_routes Maximum number of routes to calculate (default=10)
+#' @param data Data object containing road network (required)
+#' @return sero_routes S3 object
+#' @export
+sero_routes <- function(locations, accidents, max_routes = 10, data = NULL) {
   # Handle input types
   if (inherits(locations, "sero_optimal_locations")) {
     service_locations <- locations$locations
@@ -31,15 +41,15 @@ sero_routes <- function(locations, accidents, max_routes = 10, use_roads = FALSE
   } else {
     stop("locations must be sero_optimal_locations object or sf object")
   }
-  
+
   if (!inherits(accidents, "sf")) {
     stop("accidents must be an sf object")
   }
-  
+
   if (nrow(service_locations) == 0 || nrow(accidents) == 0) {
     return(create_empty_routes())
   }
-  
+
   # Ensure projected CRS for accurate distance calculations
   if (sf::st_is_longlat(service_locations)) {
     service_locations <- sf::st_transform(service_locations, 32632)
@@ -47,23 +57,33 @@ sero_routes <- function(locations, accidents, max_routes = 10, use_roads = FALSE
   if (sf::st_is_longlat(accidents)) {
     accidents <- sf::st_transform(accidents, 32632)
   }
-  
-  # Calculate routes
-  if (use_roads && !is.null(data)) {
-    routes_data <- calculate_road_routes(service_locations, accidents, max_routes, data)
-  } else {
-    routes_data <- calculate_straight_routes(service_locations, accidents, max_routes)
+
+  # Ensure road network is loaded
+  if (is.null(data) || !("roads" %in% names(data))) {
+    gpkg_path <- system.file("gpkg", "dataset.gpkg", package = "SERO")
+    if (file.exists(gpkg_path)) {
+      roads <- sf::st_read(gpkg_path, layer = "munster_roadsshp", quiet = TRUE)
+      if (sf::st_is_longlat(roads)) {
+        roads <- sf::st_transform(roads, 32632)
+      }
+      data$roads <- roads
+    } else {
+      stop("Road network not found. Please provide road data in the 'data' argument.")
+    }
   }
-  
+
+  # Calculate routes (road-based only)
+  routes_data <- calculate_road_routes(service_locations, accidents, max_routes, data)
+
   # Create summary statistics
   summary_stats <- list(
     total_routes = nrow(routes_data$routes),
     avg_distance = mean(routes_data$routes$distance),
     avg_time = mean(routes_data$routes$estimated_time),
-    max_distance = max(routes_data$routes$distance),
-    max_time = max(routes_data$routes$estimated_time)
+    max_distance = base::max(routes_data$routes$distance),
+    max_time = base::max(routes_data$routes$estimated_time)
   )
-  
+
   # Create S3 object
   result <- structure(
     list(
@@ -72,14 +92,14 @@ sero_routes <- function(locations, accidents, max_routes = 10, use_roads = FALSE
       accidents = accidents,
       parameters = list(
         max_routes = max_routes,
-        use_roads = use_roads
+        use_roads = TRUE
       ),
       summary = summary_stats,
       crs = sf::st_crs(service_locations)
     ),
     class = "sero_routes"
   )
-  
+
   return(result)
 }
 
@@ -174,7 +194,7 @@ print.sero_routes <- function(x, ...) {
   
   if (x$summary$total_routes > 0) {
     cat("Route Details:\n")
-    for (i in seq_len(min(5, nrow(x$routes)))) {
+    for (i in seq_len(base::min(5, nrow(x$routes)))) {
       cat(sprintf("  %d. Distance: %dm, Time: %.1f min\n", 
                   i, 
                   round(x$routes$distance[i]), 
@@ -188,63 +208,7 @@ print.sero_routes <- function(x, ...) {
   cat("\nUse plot() to visualize with ggplot2.\n")
 }
 
-#' Calculate straight-line routes
-#' @param service_locations sf object with service locations
-#' @param accidents sf object with accident locations  
-#' @param max_routes Maximum number of routes to calculate
-#' @return List with routes sf object
-calculate_straight_routes <- function(service_locations, accidents, max_routes) {
-  
-  # Calculate distance matrix
-  distance_matrix <- sf::st_distance(service_locations, accidents)
-  
-  # Find optimal routes (nearest service location to each accident)
-  routes_data <- data.frame()
-  
-  for (i in seq_len(min(max_routes, nrow(accidents)))) {
-    # Find closest service location for this accident
-    accident_idx <- i
-    service_distances <- distance_matrix[, accident_idx]
-    closest_service_idx <- which.min(service_distances)
-    
-    # Create route data
-    route_data <- data.frame(
-      route_id = i,
-      service_location_id = closest_service_idx,
-      accident_id = accident_idx,
-      distance = as.numeric(service_distances[closest_service_idx]),
-      estimated_time = as.numeric(service_distances[closest_service_idx]) / 50 * 3.6 # Assume 50 km/h avg speed
-    )
-    
-    routes_data <- rbind(routes_data, route_data)
-  }
-  
-  # Create route geometries (straight lines)
-  route_geometries <- list()
-  for (i in seq_len(nrow(routes_data))) {
-    service_idx <- routes_data$service_location_id[i]
-    accident_idx <- routes_data$accident_id[i]
-    
-    # Create line between service location and accident
-    service_point <- sf::st_geometry(service_locations[service_idx, ])
-    accident_point <- sf::st_geometry(accidents[accident_idx, ])
-    
-    route_line <- sf::st_linestring(rbind(
-      sf::st_coordinates(service_point),
-      sf::st_coordinates(accident_point)
-    ))
-    
-    route_geometries[[i]] <- route_line
-  }
-  
-  # Create routes sf object
-  routes_sf <- sf::st_sf(
-    routes_data,
-    geometry = sf::st_sfc(route_geometries, crs = sf::st_crs(service_locations))
-  )
-  
-  return(list(routes = routes_sf))
-}
+## Straight-line routing removed: road-based routing is now always used
 
 #' Calculate road-based routes
 #' @param service_locations sf object with service locations
@@ -280,7 +244,7 @@ calculate_road_routes <- function(service_locations, accidents, max_routes, data
   
   routes_data <- data.frame()
   
-  for (i in seq_len(min(max_routes, nrow(accidents)))) {
+  for (i in seq_len(base::min(max_routes, nrow(accidents)))) {
     # Find closest service location using road network distance approximation
     accident_point <- accidents[i, ]
     
@@ -450,13 +414,23 @@ sero_load_locations <- function(filename) {
 #' locations <- sero_optimal(data)
 #' sero_interactive_routing(data, locations)
 #' }
-sero_interactive_routing <- function(data, optimal_locations, use_roads = TRUE) {
-  
-  # Check if leaflet is available
+
+#' Create interactive routing map (OSRM road-based routing by default)
+#'
+#' Clicking on the map calculates and displays the true road route from the nearest optimal location to the clicked destination using OSRM.
+#' @param data Data object containing spatial layers
+#' @param optimal_locations sf object with optimal locations (or path to file)
+#' @return Interactive leaflet map
+#' @export
+sero_interactive_routing <- function(data, optimal_locations) {
+  # Check required packages
   if (!requireNamespace("leaflet", quietly = TRUE)) {
     stop("leaflet package is required for interactive routing. Please install it with: install.packages('leaflet')")
   }
-  
+  if (!requireNamespace("osrm", quietly = TRUE)) {
+    stop("osrm package is required for routing. Please install it with: install.packages('osrm')")
+  }
+
   # Handle optimal locations input
   if (inherits(optimal_locations, "sero_optimal_locations")) {
     locations_sf <- optimal_locations$locations
@@ -467,10 +441,10 @@ sero_interactive_routing <- function(data, optimal_locations, use_roads = TRUE) 
   } else {
     stop("optimal_locations must be sf object, sero_optimal_locations object, or file path")
   }
-  
-  # Transform to WGS84 for leaflet
+
+  # Transform to WGS84 for leaflet and OSRM
   locations_wgs84 <- sf::st_transform(locations_sf, 4326)
-  
+
   # Load districts for basemap
   districts_wgs84 <- NULL
   if ("districts" %in% names(data)) {
@@ -486,12 +460,12 @@ sero_interactive_routing <- function(data, optimal_locations, use_roads = TRUE) 
       warning("Could not load districts: ", e$message)
     })
   }
-  
+
   # Create base map
   m <- leaflet::leaflet() %>%
     leaflet::addTiles() %>%
     leaflet::setView(lng = 7.628, lat = 51.961, zoom = 12)
-  
+
   # Add districts
   if (!is.null(districts_wgs84)) {
     m <- m %>%
@@ -505,7 +479,7 @@ sero_interactive_routing <- function(data, optimal_locations, use_roads = TRUE) 
         group = "Districts"
       )
   }
-  
+
   # Add optimal locations
   m <- m %>%
     leaflet::addCircleMarkers(
@@ -514,41 +488,58 @@ sero_interactive_routing <- function(data, optimal_locations, use_roads = TRUE) 
       color = "red",
       fillColor = "red",
       fillOpacity = 0.8,
-      popup = ~paste("Optimal Location", seq_along(locations_wgs84[[1]])),
+      popup = ~paste("Optimal Location", seq_len(nrow(locations_wgs84))),
       group = "Optimal Locations"
     )
-  
-  # Add click event for routing
+
+  # Add click event for OSRM routing
   m <- m %>%
     leaflet::addLayersControl(
       overlayGroups = c("Districts", "Optimal Locations"),
       options = leaflet::layersControlOptions(collapsed = FALSE)
     ) %>%
-    htmlwidgets::onRender("
-      function(el, x) {
-        var map = this;
-        
-        map.on('click', function(e) {
-          var lat = e.latlng.lat;
-          var lng = e.latlng.lng;
-          
-          // Add accident marker
-          L.marker([lat, lng], {
-            icon: L.icon({
-              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-              shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-              iconSize: [25, 41],
-              iconAnchor: [12, 41],
-              popupAnchor: [1, -34],
-              shadowSize: [41, 41]
-            })
-          }).addTo(map)
-          .bindPopup('Accident Location<br/>Use sero_launch_interactive() for full routing')
-          .openPopup();
-        });
-      }
-    ")
-  
+    htmlwidgets::onRender(
+      sprintf('
+        function(el, x) {
+          var map = this;
+          var Shiny = window.Shiny;
+          map.on("click", function(e) {
+            var lat = e.latlng.lat;
+            var lng = e.latlng.lng;
+            if (Shiny) {
+              Shiny.setInputValue("sero_accident_click", {lat: lat, lng: lng});
+            }
+          });
+        }
+      ')
+    )
+
+  # Add server logic for OSRM routing
+  if (requireNamespace("shiny", quietly = TRUE)) {
+    shiny::observeEvent(shiny::input$sero_accident_click, {
+      click <- shiny::input$sero_accident_click
+      lat <- click$lat
+      lng <- click$lng
+      # Create accident point
+      accident_point <- sf::st_sf(id = 1, geometry = sf::st_sfc(sf::st_point(c(lng, lat)), crs = 4326))
+      # Find nearest optimal location
+      nearest_idx <- sf::st_nearest_feature(accident_point, locations_wgs84)
+      service_location <- locations_wgs84[nearest_idx, ]
+      # Get coordinates for OSRM
+      service_coords <- sf::st_coordinates(service_location)
+      accident_coords_df <- data.frame(lon = lng, lat = lat)
+      service_coords_df <- data.frame(lon = service_coords[1, 1], lat = service_coords[1, 2])
+      # Calculate route using OSRM
+      route <- osrm::osrmRoute(src = service_coords_df, dst = accident_coords_df, returnclass = "sf")
+      # Update map with route and marker
+      leaflet::leafletProxy("map") %>%
+        leaflet::clearGroup("Route") %>%
+        leaflet::clearGroup("Accident") %>%
+        leaflet::addPolylines(data = route, color = "blue", weight = 4, opacity = 0.8, group = "Route") %>%
+        leaflet::addMarkers(lng = lng, lat = lat, popup = paste("Accident Location<br/>Distance:", round(route$distance, 2), "km<br/>Duration:", round(route$duration, 1), "minutes"), group = "Accident")
+    })
+  }
+
   return(m)
 }
 

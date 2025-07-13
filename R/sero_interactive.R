@@ -128,7 +128,7 @@ sero_select <- function(data, longitude, latitude, max_distance = 1000) {
   distances <- sf::st_distance(selected_proj, accidents_proj)
   
   # Find nearest accident within max_distance
-  min_distance <- min(distances)
+  min_distance <- base::min(distances)
   if (as.numeric(min_distance) > max_distance) {
     warning("No accidents found within ", max_distance, " meters of selected point")
     return(NULL)
