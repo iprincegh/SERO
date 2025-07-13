@@ -31,7 +31,7 @@ Suggests:
     plotly,
     shiny,
     osrm,
-    leaflet
-VignetteBuilder: knitr
+    leaflet,
+    openxlsx
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2

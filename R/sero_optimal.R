@@ -17,6 +17,7 @@
 #' @param target_crs Target CRS for calculations (default=25832 for UTM Zone 32N)
 #' @importFrom rlang .data
 #' @importFrom rlang sym
+#' @importFrom utils head modifyList write.csv
 #' @param avoid_landuse Logical, whether to avoid existing land use areas (default=TRUE)
 #' @param weights Named list of scoring weights: accident_weight, population_weight, road_weight (default: c(0.4, 0.3, 0.3))
 #' @param min_accidents Minimum number of accidents per grid cell to consider (default=1)
@@ -136,7 +137,7 @@ sero_optimal <- function(data,
     what = "polygons"
   )
   
-  # Convert to sf object and filter to Muenster boundary
+  # Convert to sf x and filter to Muenster boundary
   grid <- sf::st_sf(
     grid_id = seq_along(grid_cells),
     geometry = grid_cells
@@ -428,7 +429,7 @@ create_empty_optimal_locations <- function() {
 
 #' Plot optimal locations with context
 #'
-#' @param object sero_optimal_locations object
+#' @param x sero_optimal_locations object
 #' @param data Original data for context (optional)
 #' @param show_grid Logical, whether to show grid cells (default=FALSE)
 #' @param show_munster Logical, whether to show Muenster city boundaries (default=TRUE)
@@ -438,7 +439,7 @@ create_empty_optimal_locations <- function() {
 #' @return ggplot2 object
 #' @export
 plot.sero_optimal_locations <- function(x, data = NULL, show_grid = FALSE, show_munster = TRUE, show_hotspots = TRUE, show_landuse = FALSE, ...) {
-  if (nrow(object$locations) == 0) {
+  if (nrow(x$locations) == 0) {
     return(ggplot2::ggplot() + 
            ggplot2::geom_text(ggplot2::aes(x = 0, y = 0, label = "No optimal locations found"), 
                              size = 5) +
@@ -446,8 +447,8 @@ plot.sero_optimal_locations <- function(x, data = NULL, show_grid = FALSE, show_
   }
   
   # Transform to WGS84 for plotting
-  locations_wgs84 <- sf::st_transform(object$locations, 4326)
-  accidents_wgs84 <- sf::st_transform(object$accidents, 4326)
+  locations_wgs84 <- sf::st_transform(x$locations, 4326)
+  accidents_wgs84 <- sf::st_transform(x$accidents, 4326)
   
   # Create base plot with Muenster boundaries
   p <- ggplot2::ggplot()
@@ -553,8 +554,8 @@ plot.sero_optimal_locations <- function(x, data = NULL, show_grid = FALSE, show_
   p <- p + ggplot2::scale_size_continuous(name = "Optimization Score", range = c(4, 10))
   
   # Add grid cells if requested
-  if (show_grid && nrow(object$grid_cells) > 0) {
-    grid_wgs84 <- sf::st_transform(object$grid_cells, 4326)
+  if (show_grid && nrow(x$grid_cells) > 0) {
+    grid_wgs84 <- sf::st_transform(x$grid_cells, 4326)
     p <- p + ggplot2::geom_sf(data = grid_wgs84,
                              fill = "transparent",
                              color = "lightgray",
@@ -564,8 +565,8 @@ plot.sero_optimal_locations <- function(x, data = NULL, show_grid = FALSE, show_
   # Styling
   p <- p + ggplot2::theme_minimal() +
     ggplot2::labs(title = "Optimal Emergency Service Locations - Muenster",
-                 subtitle = paste("Locations found:", object$summary$locations_found,
-                                 "| Average score:", round(object$summary$avg_score, 3),
+                 subtitle = paste("Locations found:", x$summary$locations_found,
+                                 "| Average score:", round(x$summary$avg_score, 3),
                                  "| Base map: Muenster districts",
                                  "| Land use:", if(show_landuse) "shown" else "hidden"),
                  x = "Longitude", y = "Latitude") +
@@ -785,7 +786,7 @@ sero_plot_all <- function(optimal_locations, data,
 
 #' Print method for sero_optimal_locations
 #'
-#' @param object sero_optimal_locations object
+#' @param x sero_optimal_locations object
 #' @param ... additional arguments (unused)
 #' @export
 print.sero_optimal_locations <- function(x, ...) {
@@ -793,29 +794,29 @@ print.sero_optimal_locations <- function(x, ...) {
   cat("========================================\n\n")
   
   cat("Summary:\n")
-  cat("- Total high-risk accidents:", object$summary$total_accidents, "\n")
-  cat("- Grid cells created:", object$summary$grid_cells_created, "\n")
-  cat("- Grid cells with accidents:", object$summary$grid_cells_with_accidents, "\n")
-  cat("- Grid cells after road filtering:", object$summary$grid_cells_after_roads, "\n")
-  cat("- Optimal locations found:", object$summary$locations_found, "\n")
-  cat("- Maximum score:", round(object$summary$max_score, 3), "\n")
-  cat("- Average score:", round(object$summary$avg_score, 3), "\n\n")
+  cat("- Total high-risk accidents:", x$summary$total_accidents, "\n")
+  cat("- Grid cells created:", x$summary$grid_cells_created, "\n")
+  cat("- Grid cells with accidents:", x$summary$grid_cells_with_accidents, "\n")
+  cat("- Grid cells after road filtering:", x$summary$grid_cells_after_roads, "\n")
+  cat("- Optimal locations found:", x$summary$locations_found, "\n")
+  cat("- Maximum score:", round(x$summary$max_score, 3), "\n")
+  cat("- Average score:", round(x$summary$avg_score, 3), "\n\n")
   
   cat("Parameters:\n")
-  cat("- Grid size:", object$parameters$grid_size, "meters\n")
-  cat("- Risk categories:", paste(object$parameters$risk_categories, collapse = ", "), "\n")
-  cat("- Suitable land use:", paste(object$parameters$suitable_landuse, collapse = ", "), "\n")
-  cat("- Road distance:", object$parameters$min_road_distance, "-", object$parameters$max_road_distance, "meters\n")
-  cat("- Maximum locations:", object$parameters$max_locations, "\n\n")
+  cat("- Grid size:", x$parameters$grid_size, "meters\n")
+  cat("- Risk categories:", paste(x$parameters$risk_categories, collapse = ", "), "\n")
+  cat("- Suitable land use:", paste(x$parameters$suitable_landuse, collapse = ", "), "\n")
+  cat("- Road distance:", x$parameters$min_road_distance, "-", x$parameters$max_road_distance, "meters\n")
+  cat("- Maximum locations:", x$parameters$max_locations, "\n\n")
   
   cat("Multi-criteria analysis applied:\n")
-  for (i in seq_along(object$summary$criteria_applied)) {
-    cat("  ", object$summary$criteria_applied[i], "\n")
+  for (i in seq_along(x$summary$criteria_applied)) {
+    cat("  ", x$summary$criteria_applied[i], "\n")
   }
   
-  if (object$summary$locations_found > 0) {
+  if (x$summary$locations_found > 0) {
     cat("\nTop 5 Optimal Locations:\n")
-    top_locations <- head(object$locations, 5)
+    top_locations <- head(x$locations, 5)
     for (i in seq_len(nrow(top_locations))) {
       cat(sprintf("  %d. Score: %.3f, Accidents: %d, Population: %.1f\n",
                   i,
@@ -831,13 +832,13 @@ print.sero_optimal_locations <- function(x, ...) {
 
 #' Print detailed summary of optimal location analysis
 #'
-#' @param object sero_optimal_locations object
+#' @param x sero_optimal_locations object
 #' @param detailed Logical, whether to show detailed breakdown (default=TRUE)
 #' @param show_locations Logical, whether to show individual location details (default=TRUE)
 #' @param show_criteria Logical, whether to show criteria breakdown (default=TRUE)
 #' @return NULL (prints to console)
 #' @export
-summary.sero_optimal_locations <- function(object, detailed = TRUE, show_locations = TRUE, show_criteria = TRUE) {
+summary.sero_optimal_locations <- function(object, detailed = TRUE, show_locations = TRUE, show_criteria = TRUE, ...) {
   cat("===============================================================================\n")
   cat("                    SERO OPTIMAL LOCATION ANALYSIS SUMMARY                    \n")
   cat("===============================================================================\n\n")
@@ -848,37 +849,37 @@ summary.sero_optimal_locations <- function(object, detailed = TRUE, show_locatio
   cat("Analysis Date:", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n")
   cat("Target Area: Muenster, Germany\n")
   cat("Analysis Type: Multi-criteria Emergency Service Location Optimization\n")
-  cat("Status:", if(object$summary$locations_found > 0) "YES SUCCESS" else "NO NO LOCATIONS FOUND", "\n\n")
+  cat("Status:", if(x$summary$locations_found > 0) "YES SUCCESS" else "NO NO LOCATIONS FOUND", "\n\n")
   
   # 2. DATA SUMMARY
   cat("* INPUT DATA SUMMARY\n")
   cat("------------------------------------------------------------------------------\n")
-  cat("* Total accident records processed:", object$summary$total_accidents, "\n")
-  cat("* Risk categories analyzed:", paste(object$parameters$risk_categories, collapse = ", "), "\n")
-  cat("* Grid resolution:", object$parameters$grid_size, "meters\n")
-  cat("* Target coordinate system: EPSG:", object$parameters$target_crs, "\n")
-  cat("* Land use avoidance:", if(object$parameters$avoid_landuse) "YES ENABLED" else "NO DISABLED", "\n")
-  cat("* Road proximity criteria:", object$parameters$min_road_distance, "-", object$parameters$max_road_distance, "meters\n\n")
+  cat("* Total accident records processed:", x$summary$total_accidents, "\n")
+  cat("* Risk categories analyzed:", paste(x$parameters$risk_categories, collapse = ", "), "\n")
+  cat("* Grid resolution:", x$parameters$grid_size, "meters\n")
+  cat("* Target coordinate system: EPSG:", x$parameters$target_crs, "\n")
+  cat("* Land use avoidance:", if(x$parameters$avoid_landuse) "YES ENABLED" else "NO DISABLED", "\n")
+  cat("* Road proximity criteria:", x$parameters$min_road_distance, "-", x$parameters$max_road_distance, "meters\n\n")
   
   # 3. FILTERING PIPELINE
   if (detailed) {
     cat(" FILTERING PIPELINE RESULTS\n")
     cat("------------------------------------------------------------------------------\n")
-    cat("Step 1: Grid creation            ->", sprintf("%5d", object$summary$grid_cells_created), "cells\n")
-    cat("Step 2: Accident intersection    ->", sprintf("%5d", object$summary$grid_cells_with_accidents), "cells with accidents\n")
+    cat("Step 1: Grid creation            ->", sprintf("%5d", x$summary$grid_cells_created), "cells\n")
+    cat("Step 2: Accident intersection    ->", sprintf("%5d", x$summary$grid_cells_with_accidents), "cells with accidents\n")
     
-    if (object$parameters$avoid_landuse) {
-      cat("Step 3: Land use avoidance       ->", sprintf("%5d", object$summary$grid_cells_after_landuse), "cells avoiding landuse\n")
+    if (x$parameters$avoid_landuse) {
+      cat("Step 3: Land use avoidance       ->", sprintf("%5d", x$summary$grid_cells_after_landuse), "cells avoiding landuse\n")
     } else {
       cat("Step 3: Land use avoidance       ->", sprintf("%5s", "SKIP"), "(disabled)\n")
     }
     
-    cat("Step 4: Road proximity filter    ->", sprintf("%5d", object$summary$grid_cells_after_roads), "cells meeting road criteria\n")
-    cat("Step 5: Final optimization       ->", sprintf("%5d", object$summary$locations_found), "optimal locations\n")
+    cat("Step 4: Road proximity filter    ->", sprintf("%5d", x$summary$grid_cells_after_roads), "cells meeting road criteria\n")
+    cat("Step 5: Final optimization       ->", sprintf("%5d", x$summary$locations_found), "optimal locations\n")
     
     # Calculate filtering efficiency
-    if (object$summary$grid_cells_created > 0) {
-      efficiency <- round((object$summary$locations_found / object$summary$grid_cells_created) * 100, 2)
+    if (x$summary$grid_cells_created > 0) {
+      efficiency <- round((x$summary$locations_found / x$summary$grid_cells_created) * 100, 2)
       cat("                                   ", sprintf("%5s", paste0(efficiency, "%")), "overall efficiency\n")
     }
     cat("\n")
@@ -888,22 +889,22 @@ summary.sero_optimal_locations <- function(object, detailed = TRUE, show_locatio
   cat(" OPTIMIZATION RESULTS\n")
   cat("------------------------------------------------------------------------------\n")
   
-  if (object$summary$locations_found > 0) {
+  if (x$summary$locations_found > 0) {
     cat("YES Analysis completed successfully!\n")
-    cat("* Optimal locations found:", object$summary$locations_found, "out of", object$parameters$max_locations, "requested\n")
+    cat("* Optimal locations found:", x$summary$locations_found, "out of", x$parameters$max_locations, "requested\n")
     cat("* Quality metrics:\n")
-    cat("  - Highest optimization score:", sprintf("%.3f", object$summary$max_score), "\n")
-    cat("  - Average optimization score:", sprintf("%.3f", object$summary$avg_score), "\n")
-    cat("  - Score range:", sprintf("%.3f", min(object$locations$score)), "-", sprintf("%.3f", max(object$locations$score)), "\n")
+    cat("  - Highest optimization score:", sprintf("%.3f", x$summary$max_score), "\n")
+    cat("  - Average optimization score:", sprintf("%.3f", x$summary$avg_score), "\n")
+    cat("  - Score range:", sprintf("%.3f", min(x$locations$score)), "-", sprintf("%.3f", max(x$locations$score)), "\n")
     
     # Additional statistics
     cat("* Location characteristics:\n")
-    cat("  - Total accidents covered:", sum(object$locations$accident_count), "\n")
-    cat("  - Average accidents per location:", sprintf("%.1f", mean(object$locations$accident_count)), "\n")
-    cat("  - Average road distance:", sprintf("%.0f", mean(object$locations$road_distance)), "meters\n")
+    cat("  - Total accidents covered:", sum(x$locations$accident_count), "\n")
+    cat("  - Average accidents per location:", sprintf("%.1f", mean(x$locations$accident_count)), "\n")
+    cat("  - Average road distance:", sprintf("%.0f", mean(x$locations$road_distance)), "meters\n")
     
-    if (any(object$locations$population_density > 0)) {
-      cat("  - Average population density:", sprintf("%.1f", mean(object$locations$population_density)), "\n")
+    if (any(x$locations$population_density > 0)) {
+      cat("  - Average population density:", sprintf("%.1f", mean(x$locations$population_density)), "\n")
     }
     
   } else {
@@ -919,8 +920,8 @@ summary.sero_optimal_locations <- function(object, detailed = TRUE, show_locatio
   if (show_criteria) {
     cat(" MULTI-CRITERIA ANALYSIS DETAILS\n")
     cat("------------------------------------------------------------------------------\n")
-    for (i in seq_along(object$summary$criteria_applied)) {
-      cat(sprintf("  %s\n", object$summary$criteria_applied[i]))
+    for (i in seq_along(x$summary$criteria_applied)) {
+      cat(sprintf("  %s\n", x$summary$criteria_applied[i]))
     }
     cat("\n* Scoring weights:\n")
     cat("  - Accident density: 40%\n")
@@ -929,19 +930,19 @@ summary.sero_optimal_locations <- function(object, detailed = TRUE, show_locatio
   }
   
   # 6. INDIVIDUAL LOCATIONS
-  if (show_locations && object$summary$locations_found > 0) {
+  if (show_locations && x$summary$locations_found > 0) {
     cat(" INDIVIDUAL LOCATION DETAILS\n")
     cat("------------------------------------------------------------------------------\n")
     
     # Create a formatted table
     locations_df <- data.frame(
-      ID = object$locations$location_id,
-      Score = sprintf("%.3f", object$locations$score),
-      Accidents = object$locations$accident_count,
-      RoadDist = sprintf("%.0fm", object$locations$road_distance),
-      PopDensity = sprintf("%.1f", object$locations$population_density),
-      Longitude = sprintf("%.6f", object$locations$longitude),
-      Latitude = sprintf("%.6f", object$locations$latitude)
+      ID = x$locations$location_id,
+      Score = sprintf("%.3f", x$locations$score),
+      Accidents = x$locations$accident_count,
+      RoadDist = sprintf("%.0fm", x$locations$road_distance),
+      PopDensity = sprintf("%.1f", x$locations$population_density),
+      Longitude = sprintf("%.6f", x$locations$longitude),
+      Latitude = sprintf("%.6f", x$locations$latitude)
     )
     
     # Print table header
@@ -967,7 +968,7 @@ summary.sero_optimal_locations <- function(object, detailed = TRUE, show_locatio
   cat(" RECOMMENDATIONS\n")
   cat("------------------------------------------------------------------------------\n")
   
-  if (object$summary$locations_found > 0) {
+  if (x$summary$locations_found > 0) {
     cat("YES Next steps:\n")
     cat("  1. Visualize results: plot(result) or sero_plot_all(result, data)\n")
     cat("  2. Validate locations through field assessment\n")
@@ -975,11 +976,11 @@ summary.sero_optimal_locations <- function(object, detailed = TRUE, show_locatio
     cat("  4. Evaluate infrastructure requirements for each location\n")
     
     # Performance-based recommendations
-    if (object$summary$max_score < 0.5) {
+    if (x$summary$max_score < 0.5) {
       cat("    Low optimization scores detected - consider adjusting criteria\n")
     }
     
-    if (object$summary$locations_found < object$parameters$max_locations) {
+    if (x$summary$locations_found < x$parameters$max_locations) {
       cat("    Fewer locations found than requested - consider relaxing constraints\n")
     }
     
@@ -1000,7 +1001,7 @@ summary.sero_optimal_locations <- function(object, detailed = TRUE, show_locatio
 
 #' Export optimal location results to various formats
 #'
-#' @param object sero_optimal_locations object
+#' @param x sero_optimal_locations object
 #' @param format Export format ("csv", "geojson", "shapefile", "xlsx")
 #' @param filename Output filename (without extension)
 #' @param include_grid Logical, whether to include grid cells in export
@@ -1008,7 +1009,7 @@ summary.sero_optimal_locations <- function(object, detailed = TRUE, show_locatio
 #' @export
 sero_export_results <- function(x, format = "csv", filename = "sero_optimal_locations", include_grid = FALSE) {
   
-  if (nrow(object$locations) == 0) {
+  if (nrow(x$locations) == 0) {
     warning("No locations to export")
     return(character(0))
   }
@@ -1018,8 +1019,8 @@ sero_export_results <- function(x, format = "csv", filename = "sero_optimal_loca
   # Export locations
   if (format == "csv") {
     # Convert to data frame with coordinates
-    locations_df <- sf::st_drop_geometry(object$locations)
-    coords <- sf::st_coordinates(object$locations)
+    locations_df <- sf::st_drop_geometry(x$locations)
+    coords <- sf::st_coordinates(x$locations)
     locations_df$longitude <- coords[, 1]
     locations_df$latitude <- coords[, 2]
     
@@ -1032,21 +1033,21 @@ sero_export_results <- function(x, format = "csv", filename = "sero_optimal_loca
     summary_df <- data.frame(
       Metric = c("Total Accidents", "Grid Cells Created", "Grid Cells with Accidents", 
                 "Grid Cells After Roads", "Locations Found", "Max Score", "Avg Score"),
-      Value = c(object$summary$total_accidents, object$summary$grid_cells_created, 
-               object$summary$grid_cells_with_accidents, object$summary$grid_cells_after_roads,
-               object$summary$locations_found, object$summary$max_score, object$summary$avg_score)
+      Value = c(x$summary$total_accidents, x$summary$grid_cells_created, 
+               x$summary$grid_cells_with_accidents, x$summary$grid_cells_after_roads,
+               x$summary$locations_found, x$summary$max_score, x$summary$avg_score)
     )
     write.csv(summary_df, summary_file, row.names = FALSE)
     created_files <- c(created_files, summary_file)
     
   } else if (format == "geojson") {
     geojson_file <- paste0(filename, "_locations.geojson")
-    sf::st_write(object$locations, geojson_file, delete_dsn = TRUE, quiet = TRUE)
+    sf::st_write(x$locations, geojson_file, delete_dsn = TRUE, quiet = TRUE)
     created_files <- c(created_files, geojson_file)
     
   } else if (format == "shapefile") {
     shp_file <- paste0(filename, "_locations.shp")
-    sf::st_write(object$locations, shp_file, delete_dsn = TRUE, quiet = TRUE)
+    sf::st_write(x$locations, shp_file, delete_dsn = TRUE, quiet = TRUE)
     created_files <- c(created_files, shp_file)
     
   } else if (format == "xlsx") {
@@ -1058,8 +1059,8 @@ sero_export_results <- function(x, format = "csv", filename = "sero_optimal_loca
       
       # Add locations sheet
       openxlsx::addWorksheet(wb, "Locations")
-      locations_df <- sf::st_drop_geometry(object$locations)
-      coords <- sf::st_coordinates(object$locations)
+      locations_df <- sf::st_drop_geometry(x$locations)
+      coords <- sf::st_coordinates(x$locations)
       locations_df$longitude <- coords[, 1]
       locations_df$latitude <- coords[, 2]
       openxlsx::writeData(wb, "Locations", locations_df)
@@ -1069,17 +1070,17 @@ sero_export_results <- function(x, format = "csv", filename = "sero_optimal_loca
       summary_df <- data.frame(
         Metric = c("Total Accidents", "Grid Cells Created", "Grid Cells with Accidents", 
                   "Grid Cells After Roads", "Locations Found", "Max Score", "Avg Score"),
-        Value = c(object$summary$total_accidents, object$summary$grid_cells_created, 
-                 object$summary$grid_cells_with_accidents, object$summary$grid_cells_after_roads,
-                 object$summary$locations_found, object$summary$max_score, object$summary$avg_score)
+        Value = c(x$summary$total_accidents, x$summary$grid_cells_created, 
+                 x$summary$grid_cells_with_accidents, x$summary$grid_cells_after_roads,
+                 x$summary$locations_found, x$summary$max_score, x$summary$avg_score)
       )
       openxlsx::writeData(wb, "Summary", summary_df)
       
       # Add parameters sheet
       openxlsx::addWorksheet(wb, "Parameters")
       params_df <- data.frame(
-        Parameter = names(object$parameters),
-        Value = sapply(object$parameters, function(p) paste(p, collapse = ", "))
+        Parameter = names(x$parameters),
+        Value = sapply(x$parameters, function(p) paste(p, collapse = ", "))
       )
       openxlsx::writeData(wb, "Parameters", params_df)
       
@@ -1092,14 +1093,14 @@ sero_export_results <- function(x, format = "csv", filename = "sero_optimal_loca
   }
   
   # Export grid if requested
-  if (include_grid && nrow(object$grid_cells) > 0) {
+  if (include_grid && nrow(x$grid_cells) > 0) {
     if (format == "geojson") {
       grid_file <- paste0(filename, "_grid.geojson")
-      sf::st_write(object$grid_cells, grid_file, delete_dsn = TRUE, quiet = TRUE)
+      sf::st_write(x$grid_cells, grid_file, delete_dsn = TRUE, quiet = TRUE)
       created_files <- c(created_files, grid_file)
     } else if (format == "shapefile") {
       grid_file <- paste0(filename, "_grid.shp")
-      sf::st_write(object$grid_cells, grid_file, delete_dsn = TRUE, quiet = TRUE)
+      sf::st_write(x$grid_cells, grid_file, delete_dsn = TRUE, quiet = TRUE)
       created_files <- c(created_files, grid_file)
     }
   }

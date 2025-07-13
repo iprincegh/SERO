@@ -12,13 +12,13 @@ sero_export_results(
 )
 }
 \arguments{
+\item{x}{sero_optimal_locations object}
+
 \item{format}{Export format ("csv", "geojson", "shapefile", "xlsx")}
 
 \item{filename}{Output filename (without extension)}
 
 \item{include_grid}{Logical, whether to include grid cells in export}
-
-\item{object}{sero_optimal_locations object}
 }
 \value{
 Character vector of created files

@@ -4,16 +4,22 @@
 \alias{summary.sero_optimal_locations}
 \title{Print detailed summary of optimal location analysis}
 \usage{
-\method{summary}{sero_optimal_locations}(object, detailed = TRUE, show_locations = TRUE, show_criteria = TRUE)
+\method{summary}{sero_optimal_locations}(
+  object,
+  detailed = TRUE,
+  show_locations = TRUE,
+  show_criteria = TRUE,
+  ...
+)
 }
 \arguments{
-\item{object}{sero_optimal_locations object}
-
 \item{detailed}{Logical, whether to show detailed breakdown (default=TRUE)}
 
 \item{show_locations}{Logical, whether to show individual location details (default=TRUE)}
 
 \item{show_criteria}{Logical, whether to show criteria breakdown (default=TRUE)}
+
+\item{x}{sero_optimal_locations object}
 }
 \value{
 NULL (prints to console)

@@ -15,6 +15,8 @@
 )
 }
 \arguments{
+\item{x}{sero_optimal_locations object}
+
 \item{data}{Original data for context (optional)}
 
 \item{show_grid}{Logical, whether to show grid cells (default=FALSE)}
@@ -26,8 +28,6 @@
 \item{show_landuse}{Logical, whether to show land use overlay (default=FALSE)}
 
 \item{...}{additional arguments (unused)}
-
-\item{object}{sero_optimal_locations object}
 }
 \value{
 ggplot2 object
