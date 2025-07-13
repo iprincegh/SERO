@@ -4,13 +4,7 @@
 \alias{sero_routes}
 \title{Calculate fastest routes to accident scenes}
 \usage{
-sero_routes(
-  locations,
-  accidents,
-  max_routes = 10,
-  use_roads = FALSE,
-  data = NULL
-)
+sero_routes(locations, accidents, max_routes = 10, data = NULL)
 }
 \arguments{
 \item{locations}{sero_optimal_locations object or sf object with service locations}
@@ -19,11 +13,13 @@ sero_routes(
 
 \item{max_routes}{Maximum number of routes to calculate (default=10)}
 
-\item{use_roads}{Logical, whether to use road network for routing (default=FALSE)}
+\item{data}{Data object containing road network (required)}
 
-\item{data}{Optional data object containing road network}
+\item{use_roads}{Logical, whether to use road network for routing (default=FALSE)}
 }
 \value{
+sero_routes S3 object
+
 sero_routes S3 object
 }
 \description{
@@ -40,4 +36,8 @@ plot(routes)
 # With road-based routing
 routes_road <- sero_routes(locations, data$accident, use_roads = TRUE, data = data)
 }
+Calculate fastest routes to accident scenes (road-based only)
+
+Computes fastest routes from emergency service locations to accident scenes using road network only.
+
 }

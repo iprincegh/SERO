@@ -2,16 +2,17 @@
 % Please edit documentation in R/sero_workflow.R
 \name{sero_quick_demo}
 \alias{sero_quick_demo}
-\title{Quick workflow for testing and demonstration}
+\title{SERO User-Friendly Workflow Functions}
 \usage{
-sero_quick_demo(interactive = TRUE)
+sero_quick_demo(interactive = FALSE)
 }
 \arguments{
-\item{interactive}{logical whether to launch interactive routing}
+\item{interactive}{logical whether to launch interactive mode}
 }
 \value{
-analysis results or interactive app
+results list
 }
 \description{
-Quick workflow for testing and demonstration
+Simple, fast workflow functions optimized for user experience
+Quick SERO demo (fast and user-friendly)
 }

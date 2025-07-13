@@ -1,0 +1,145 @@
+# Diagnostic: check min and max before any code runs
+```{r}
+```
+title: "SERO Emergency Response Optimization: Example Workflow"
+author: "SERO Package Team"
+date: "2025-07-13"
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+---
+
+# Setup: load libraries and restore base min/max
+```{r setup, include=TRUE}
+library(SERO)
+library(sf)
+library(ggplot2)
+library(MASS)
+library(raster)
+# Restore base min/max functions AFTER loading all packages
+min <- base::min
+max <- base::max
+cat("[DIAG] Final check - min is base::min:", identical(min, base::min), "\n")
+cat("[DIAG] Final check - max is base::max:", identical(max, base::max), "\n")
+---
+# Introduction
+
+This document demonstrates a typical user workflow for emergency location optimization using the SERO package. It covers data loading, accident visualization, optimal location finding, and professional mapping, with all plots and results shown inline.
+
+# 1. Load Data
+
+```{r}
+library(SERO)
+library(sf)
+library(ggplot2)
+# Load demo data (replace with your own data as needed)
+data <- sero_load_data()
+str(data)
+```
+
+# 2. Visualize Accidents by Severity
+
+```{r}
+cat("\n[DIAG] Structure of data$accident before plotting:\n"); str(data$accident)
+cat("[DIAG] Type of data$accident:", typeof(data$accident), "\n")
+cat("[DIAG] Structure of data$districts before plotting:\n"); str(data$districts)
+cat("[DIAG] Type of data$districts:", typeof(data$districts), "\n")
+accident_plot <- sero_plot_accidents(
+  accidents = data$accident,
+  districts = data$districts
+)
+accident_plot
+```
+
+# 3. Find Optimal Emergency Locations
+
+```{r}
+cat("\n[DIAG] Structure of data before finding optimal locations:\n"); str(data)
+cat("[DIAG] Type of data:", typeof(data), "\n")
+optimal_locs <- sero_find_optimal_locations(
+  data = data,
+  num_locations = 5,
+  method = "fast",
+  risk_category_names = c("fatal", "serious"),
+  quick = TRUE
+)
+cat("[DIAG] Structure of optimal_locs after finding:\n"); str(optimal_locs)
+cat("[DIAG] Type of optimal_locs:", typeof(optimal_locs), "\n")
+print(optimal_locs)
+```
+
+
+
+```{r}
+cat("\n[DIAG] Structure of optimal_locs before plotting:\n"); str(optimal_locs)
+cat("[DIAG] Type of optimal_locs:", typeof(optimal_locs), "\n")
+cat("[DIAG] Structure of data$districts before plotting optimal locations:\n"); str(data$districts)
+cat("[DIAG] Type of data$districts:", typeof(data$districts), "\n")
+optimal_plot <- sero_plot_optimal_locations(
+  districts = data$districts,
+  roads = data$roads,
+  landuse = data$landuse,
+  accidents = data$accident,
+  district_border_color = "black",
+  road_border_color = "gray",
+  landuse_border_color = "darkgreen",
+  landuse_fill_color = "lightgreen",
+  landuse_sample_size = 100,
+  road_sample_size = 200,
+  optimal_color = "red",
+  optimal_shape = 17
+)
+optimal_plot
+```
+
+
+
+# 5. Create Accident Hotspots (Kernel Density)
+
+```{r}
+cat("\n[DIAG] Structure of data$accident before hotspot plot:\n"); str(data$accident)
+cat("[DIAG] Type of data$accident:", typeof(data$accident), "\n")
+hotspot_plot <- sero_hotspots(data$accident, districts = data$districts, bandwidth = 0.01)
+hotspot_plot
+```
+
+# 6. Create Accident Heatmap (2D Histogram)
+
+```{r}
+cat("\n[DIAG] Structure of data$accident before heatmap plot:\n"); str(data$accident)
+cat("[DIAG] Type of data$accident:", typeof(data$accident), "\n")
+heatmap_plot <- sero_heatmap(data$accident, districts = data$districts, bins = 50)
+heatmap_plot
+```
+
+
+# 7. Performance Summary
+
+```{r}
+cat("\n[DIAG] Structure of optimal_locs before summary:\n"); str(optimal_locs)
+cat("[DIAG] Type of optimal_locs:", typeof(optimal_locs), "\n")
+cat("Emergency bases found:", nrow(optimal_locs), "\n")
+if ("accessibility_score" %in% names(optimal_locs)) {
+  cat("Average accessibility score:", round(mean(optimal_locs$accessibility_score), 3), "\n")
+  cat("Best accessibility score:", round(max(optimal_locs$accessibility_score), 3), "\n")
+}
+if ("accident_count_500m" %in% names(optimal_locs)) {
+  cat("Average accidents covered (500m):", round(mean(optimal_locs$accident_count_500m), 1), "\n")
+  cat("Maximum accidents covered (500m):", max(optimal_locs$accident_count_500m), "\n")
+}
+```
+
+
+# 8. Save Results
+
+```{r}
+sero_save_optimal_locations(optimal_locs, "optimal_locations.sqlite")
+```
+
+
+# 9. Session Info
+
+```{r}
+sessionInfo()
+```

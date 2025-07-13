@@ -6,12 +6,8 @@ Maintainer: Prince Oppong Boakye <prynx44@gmail.com>
 Authors@R: c(
     person("Prince", "Oppong Boakye", email = "prynx44@gmail.com", role = c("aut", "cre"))
     )
-Description: Spatial emergency response optimization.
-    Identifies accident hotspots using point pattern analysis, computes optimal 
-    emergency service locations using 6 multi-criteria analysis criteria, and 
-    calculates fastest routes to accident scenes. Uses R-spatial best practices 
-    with sf, ggplot2, and spatstat. Focuses exclusively on built-in data from 
-    inst/gpkg folder.
+Description: Spatial emergency response optimization for accident analysis in Muenster, Germany.
+    Identifies accident hotspots using robust point pattern analysis, computes optimal emergency service locations with multi-criteria analysis, and visualizes accident density and hotspots. All analysis uses built-in data from the inst/gpkg folder. The codebase is now streamlined and focused on core spatial workflows, with obsolete and empty files removed for clarity and maintainability.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
@@ -24,7 +20,6 @@ Imports:
     RColorBrewer,
     magrittr,
     htmlwidgets,
-    dplyr,
     stats
 Suggests:
     testthat (>= 3.0.0),

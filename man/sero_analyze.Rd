@@ -6,6 +6,7 @@
 \usage{
 sero_analyze(
   risk_categories = c(1, 2),
+  risk_category_names = NULL,
   suitable_landuse = c("residential", "commercial", "industrial"),
   max_locations = 10,
   max_routes = 20
@@ -13,6 +14,8 @@ sero_analyze(
 }
 \arguments{
 \item{risk_categories}{High-risk accident categories (default=c(1,2))}
+
+\item{risk_category_names}{High-risk accident category names (fatal, serious, slight) instead of codes}
 
 \item{suitable_landuse}{Suitable land use classes (default=c("residential", "commercial", "industrial"))}
 

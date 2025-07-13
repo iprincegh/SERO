@@ -2,41 +2,24 @@
 % Please edit documentation in R/sero_workflow.R
 \name{sero_complete_workflow}
 \alias{sero_complete_workflow}
-\title{SERO Enhanced Workflow Example}
+\title{Complete SERO workflow (comprehensive analysis)}
 \usage{
 sero_complete_workflow(
-  data_path = NULL,
-  severity_levels = c(1, 2),
-  num_optimal_locations = 5,
-  optimization_method = "hybrid",
-  launch_interactive = TRUE
+  launch_interactive = FALSE,
+  quick = TRUE,
+  num_locations = 5
 )
 }
 \arguments{
-\item{data_path}{path to GPKG file or data list (optional, uses built-in data if NULL)}
+\item{launch_interactive}{logical whether to launch interactive mode}
 
-\item{severity_levels}{vector of accident severity levels to analyze (default: c(1,2))}
+\item{quick}{logical whether to use fast calculations (default: TRUE)}
 
-\item{num_optimal_locations}{number of optimal emergency locations to find (default: 5)}
-
-\item{optimization_method}{method for finding optimal locations ("hybrid", "kmeans", "grid", "density")}
-
-\item{launch_interactive}{logical whether to launch interactive routing app}
+\item{num_locations}{number of emergency bases to find (default: 5)}
 }
 \value{
-list containing all analysis results and visualizations
+results list
 }
 \description{
-Complete workflow demonstration for SERO package with all professional features
-Run complete SERO workflow with professional features
-}
-\details{
-This function demonstrates the complete SERO workflow including:
-\itemize{
-\item Professional accident visualization with severity filtering
-\item Advanced optimal location calculation with multiple algorithms
-\item Interactive emergency routing with OSRM integration
-\item Spatialite database storage for optimal locations
-\item Comprehensive mapping with toggleable layers
-}
+Complete SERO workflow (comprehensive analysis)
 }

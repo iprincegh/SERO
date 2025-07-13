@@ -2,20 +2,43 @@
 % Please edit documentation in R/sero_visualization.R
 \name{sero_plot_base}
 \alias{sero_plot_base}
-\title{Visualization functions for SERO package data}
+\title{Visualization functions for SERO package data (road-based routing)}
 \usage{
-sero_plot_base(data, show_districts = TRUE)
+sero_plot_base(
+  data,
+  show_districts = TRUE,
+  district_label_size = 3,
+  district_label_color = "darkblue",
+  district_label_fontface = "bold",
+  district_border_color = "darkblue"
+)
 }
 \arguments{
 \item{data}{List containing spatial data layers}
 
 \item{show_districts}{Logical, whether to show district boundaries (default=TRUE)}
+
+\item{district_label_size}{Numeric, size of district label text (default=3)}
+
+\item{district_label_color}{Color for district label text (default="darkblue")}
+
+\item{district_label_fontface}{Font face for district label text (default="bold")}
+
+\item{district_border_color}{Color for district boundary (default="darkblue"). Allows users to customize the color of district borders.}
 }
 \value{
 ggplot2 object
 }
 \description{
-This file contains functions for plotting different data layers and creating
+This file contains functions for plotting spatial layers and creating
 comprehensive maps for emergency response optimization analysis.
-Plot Munster city boundaries/geometries
+All routing and analysis are road-based by default.
+}
+\details{
+User Customization:
+\itemize{
+\item All major plotting functions allow users to customize border colors for districts, land use polygons, and roads via function arguments.
+\item Colors and label shapes for accident severity, districts, and land use types are also customizable.
+\item See individual function documentation for details on available arguments.
+}
 }
