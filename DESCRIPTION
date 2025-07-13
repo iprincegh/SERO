@@ -23,15 +23,18 @@ Imports:
     utils,
     RColorBrewer,
     magrittr,
-    htmlwidgets
+    htmlwidgets,
+    dplyr,
+    stats
 Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    plotly,
+    leaflet,
     shiny,
     osrm,
-    leaflet,
+    RSQLite,
+    plotly,
     openxlsx
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
