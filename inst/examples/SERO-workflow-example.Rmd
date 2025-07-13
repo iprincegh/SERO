@@ -1,6 +1,4 @@
-# Diagnostic: check min and max before any code runs
-```{r}
-```
+---
 title: "SERO Emergency Response Optimization: Example Workflow"
 author: "SERO Package Team"
 date: "2025-07-13"
@@ -15,14 +13,13 @@ output:
 library(SERO)
 library(sf)
 library(ggplot2)
-library(MASS)
-library(raster)
-# Restore base min/max functions AFTER loading all packages
-min <- base::min
-max <- base::max
-cat("[DIAG] Final check - min is base::min:", identical(min, base::min), "\n")
-cat("[DIAG] Final check - max is base::max:", identical(max, base::max), "\n")
----
+
+# Verify base functions are active
+cat("[DIAG] min function check - min is base::min:", identical(min, base::min), "\n")
+cat("[DIAG] max function check - max is base::max:", identical(max, base::max), "\n")
+cat("[DIAG] typeof(min):", typeof(min), "\n")
+cat("[DIAG] typeof(max):", typeof(max), "\n")
+```
 # Introduction
 
 This document demonstrates a typical user workflow for emergency location optimization using the SERO package. It covers data loading, accident visualization, optimal location finding, and professional mapping, with all plots and results shown inline.
@@ -77,6 +74,7 @@ cat("[DIAG] Type of optimal_locs:", typeof(optimal_locs), "\n")
 cat("[DIAG] Structure of data$districts before plotting optimal locations:\n"); str(data$districts)
 cat("[DIAG] Type of data$districts:", typeof(data$districts), "\n")
 optimal_plot <- sero_plot_optimal_locations(
+  optimal_locs = optimal_locs,
   districts = data$districts,
   roads = data$roads,
   landuse = data$landuse,
@@ -95,21 +93,22 @@ optimal_plot
 
 
 
-# 5. Create Accident Hotspots (Kernel Density)
+# 5. Create Accident Hotspots (Point Pattern Analysis)
 
 ```{r}
-cat("\n[DIAG] Structure of data$accident before hotspot plot:\n"); str(data$accident)
+cat("\n[DIAG] Structure of data$accident before hotspot analysis:\n"); str(data$accident)
 cat("[DIAG] Type of data$accident:", typeof(data$accident), "\n")
-hotspot_plot <- sero_hotspots(data$accident, districts = data$districts, bandwidth = 0.01)
-hotspot_plot
+hotspots <- sero_hotspots(data$accident)
+print(hotspots)
+plot(hotspots, data = data)
 ```
 
-# 6. Create Accident Heatmap (2D Histogram)
+# 6. Create Accident Heatmap (Density Visualization)
 
 ```{r}
-cat("\n[DIAG] Structure of data$accident before heatmap plot:\n"); str(data$accident)
+cat("\n[DIAG] Structure of data$accident before heatmap:\n"); str(data$accident)
 cat("[DIAG] Type of data$accident:", typeof(data$accident), "\n")
-heatmap_plot <- sero_heatmap(data$accident, districts = data$districts, bins = 50)
+heatmap_plot <- sero_heatmap(data$accident)
 heatmap_plot
 ```
 
@@ -122,11 +121,11 @@ cat("[DIAG] Type of optimal_locs:", typeof(optimal_locs), "\n")
 cat("Emergency bases found:", nrow(optimal_locs), "\n")
 if ("accessibility_score" %in% names(optimal_locs)) {
   cat("Average accessibility score:", round(mean(optimal_locs$accessibility_score), 3), "\n")
-  cat("Best accessibility score:", round(max(optimal_locs$accessibility_score), 3), "\n")
+  cat("Best accessibility score:", round(base::max(optimal_locs$accessibility_score), 3), "\n")
 }
 if ("accident_count_500m" %in% names(optimal_locs)) {
   cat("Average accidents covered (500m):", round(mean(optimal_locs$accident_count_500m), 1), "\n")
-  cat("Maximum accidents covered (500m):", max(optimal_locs$accident_count_500m), "\n")
+  cat("Maximum accidents covered (500m):", base::max(optimal_locs$accident_count_500m), "\n")
 }
 ```
 

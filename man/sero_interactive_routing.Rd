@@ -4,18 +4,20 @@
 \alias{sero_interactive_routing}
 \title{Create interactive routing map (Basic version)}
 \usage{
-sero_interactive_routing(data, optimal_locations)
+sero_interactive_routing(
+  data,
+  optimal_locations,
+  risk_categories = c("fatal", "severe")
+)
 }
 \arguments{
 \item{data}{Data object containing spatial layers}
 
 \item{optimal_locations}{sf object with optimal locations (or path to file)}
 
-\item{use_roads}{Logical, whether to use road-based routing (default=TRUE)}
+\item{risk_categories}{Risk categories to highlight on map (default=c("fatal", "severe"))}
 }
 \value{
-Interactive leaflet map
-
 Interactive leaflet map
 }
 \description{
@@ -27,10 +29,7 @@ For full OSRM routing, use sero_launch_interactive().
 \examples{
 \dontrun{
 data <- sero_load_data()
-locations <- sero_optimal(data)
+locations <- sero_find_optimal_locations(data)
 sero_interactive_routing(data, locations)
 }
-Create interactive routing map (OSRM road-based routing by default)
-
-Clicking on the map calculates and displays the true road route from the nearest optimal location to the clicked destination using OSRM.
 }

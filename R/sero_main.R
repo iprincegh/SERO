@@ -12,10 +12,10 @@
 #' 5. Population Density: Higher density areas prioritized
 #' 6. Centroid Calculation: ST_Centroid equivalent for grid cells
 #'
-#' @param risk_categories High-risk accident categories (default=c(1,2))
-#' @param risk_category_names High-risk accident category names (fatal, serious, slight) instead of codes
+#' @param risk_categories High-risk accident categories (default=c("fatal", "severe"))
+#' @param risk_category_names High-risk accident category names (deprecated, use risk_categories)
 #' @param suitable_landuse Suitable land use classes (default=c("residential", "commercial", "industrial"))
-#' @param max_locations Maximum number of service locations (default=10)
+#' @param num_locations Maximum number of service locations (default=10)
 #' @param max_routes Maximum number of routes to calculate (default=20)
 #' @return List with hotspots, locations, and routes objects
 #' @export
@@ -26,22 +26,33 @@
 #' plot(results$locations)
 #' plot(results$routes)
 #' }
-sero_analyze <- function(risk_categories = c(1, 2), 
+sero_analyze <- function(risk_categories = c("fatal", "severe"), 
                         risk_category_names = NULL,
                         suitable_landuse = c("residential", "commercial", "industrial"),
-                        max_locations = 10, max_routes = 20) {
+                        num_locations = 10, max_routes = 20) {
   
   # Load built-in data
   cat("Loading built-in spatial data...\n")
   data <- sero_load_data()
   
-  # Allow risk categories by name
+  # Handle deprecated risk_category_names parameter
   if (!is.null(risk_category_names)) {
+    warning("Parameter 'risk_category_names' is deprecated. Use 'risk_categories' with descriptive names like c('fatal', 'severe').")
     name_map <- c(fatal=1, serious=2, slight=3)
     risk_categories <- unname(name_map[risk_category_names])
     if (any(is.na(risk_categories))) {
       stop("Invalid risk_category_names. Use 'fatal', 'serious', or 'slight'.")
     }
+  }
+  
+  # Convert character risk categories to numeric if needed
+  if (is.character(risk_categories)) {
+    name_map <- c("fatal" = 1, "severe" = 2, "slight" = 3)
+    numeric_categories <- unname(name_map[risk_categories])
+    if (any(is.na(numeric_categories))) {
+      stop("Invalid risk_categories. Use 'fatal', 'severe', or 'slight'.")
+    }
+    risk_categories <- numeric_categories
   }
   
   # Step 1: Identify hotspots
@@ -50,9 +61,9 @@ sero_analyze <- function(risk_categories = c(1, 2),
   
   # Step 2: Compute optimal locations using enhanced multi-criteria analysis
   cat("Step 2: Computing optimal service locations using enhanced multi-criteria analysis...\n")
-  locations <- sero_optimal(data, 
+  locations <- sero_find_optimal_locations(data, 
                            risk_categories = risk_categories,
-                           max_locations = max_locations)
+                           num_locations = num_locations)
   
   # Step 3: Calculate routes
   cat("Step 3: Calculating emergency routes...\n")

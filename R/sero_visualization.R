@@ -67,6 +67,9 @@ sero_plot_base <- function(data, show_districts = TRUE, district_label_size = 3,
 }
 
 ## Plot land use data with labels
+#' Plot land use data with customizable labels and colors
+#'
+#' This function creates a visualization of land use data with optional labels and customizable styling.
 #'
 #' @param data List containing spatial data layers
 #' @param label_landuse Logical, whether to show land use labels (default=TRUE)
@@ -235,6 +238,9 @@ sero_plot_pop <- function(data, show_values = TRUE) {
 }
 
 ## Plot road network
+#' Plot road network with customizable styling
+#'
+#' This function creates a visualization of the road network with customizable colors and road type filtering.
 #'
 #' @param data List containing spatial data layers
 #' @param road_type Character, type of roads to highlight (default="all")
@@ -317,6 +323,9 @@ sero_plot_roads <- function(data, road_type = "all", road_border_color = "darkre
 
 
 ## Plot accidents with severity labels (risk category by name supported)
+#' Plot accidents with severity-based styling and labels
+#'
+#' This function visualizes accident data with customizable colors and labels based on severity categories.
 #'
 #' @param data List containing spatial data layers
 #' @param risk_categories Vector of risk categories to include (numeric or character, e.g. c(1,2) or c("fatal","serious"))

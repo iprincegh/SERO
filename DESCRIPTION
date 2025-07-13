@@ -1,7 +1,7 @@
 Package: SERO
 Title: Spatial Emergency Response Optimization
 Version: 0.1.0
-Author: Prince Oppong Boakye <prynx44@gmail.com>
+Author: Prince Oppong Boakye [aut, cre]
 Maintainer: Prince Oppong Boakye <prynx44@gmail.com>
 Authors@R: c(
     person("Prince", "Oppong Boakye", email = "prynx44@gmail.com", role = c("aut", "cre"))
@@ -30,6 +30,8 @@ Suggests:
     osrm,
     RSQLite,
     plotly,
-    openxlsx
+    openxlsx,
+    ggspatial
+VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2

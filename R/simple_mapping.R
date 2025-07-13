@@ -60,8 +60,6 @@ sero_plot_accidents <- function(accidents,
   }
   
   # Create static ggplot (fast and reliable)
-  cat("[DIAG] typeof(min):", typeof(min), "\n")
-  print(min)
   p <- ggplot2::ggplot() +
     ggplot2::geom_sf(data = districts_wgs84, 
                     fill = "lightblue", 
@@ -107,6 +105,10 @@ sero_plot_accidents <- function(accidents,
 }
 
 ## Plot optimal locations with professional styling (fast version)
+#' Plot optimal emergency service locations with contextual data
+#'
+#' This function creates a professional visualization of optimal emergency service locations
+#' with optional contextual layers including districts, roads, land use, and accidents.
 #'
 #' @param optimal_locs sf object with emergency service locations
 #' @param districts sf object with district boundaries
@@ -146,9 +148,8 @@ sero_plot_optimal_locations <- function(optimal_locs,
   # Transform all to WGS84
   optimal_wgs84 <- sf::st_transform(optimal_locs, 4326)
   districts_wgs84 <- sf::st_transform(districts, 4326)
+  
   # Create base map
-  cat("[DIAG] typeof(min):", typeof(min), "\n")
-  print(min)
   p <- ggplot2::ggplot() +
     ggplot2::geom_sf(data = districts_wgs84, 
                     fill = "lightgray", 
