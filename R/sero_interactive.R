@@ -372,14 +372,14 @@ print.sero_route_to_accident <- function(x, ...) {
 sero_workflow <- function(data, optimal_locations, longitude, latitude, show_all_routes = FALSE) {
   
   # Step 1: Select accident by coordinates
-  selected_accident <- sero_select_accident_by_coords(data, longitude, latitude)
+  selected_accident <- sero_select(data, longitude, latitude)
   
   if (is.null(selected_accident)) {
     stop("No accident found at the selected coordinates")
   }
   
   # Step 2: Calculate route to selected accident
-  route <- sero_route_to_selected_accident(optimal_locations, selected_accident, show_all_routes)
+  route <- sero_route(optimal_locations, selected_accident, show_all_routes)
   
   return(route)
 }

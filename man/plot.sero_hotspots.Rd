@@ -11,7 +11,7 @@
 
 \item{data}{Original data for context (optional)}
 
-\item{show_munster}{Logical, whether to show Münster city boundaries (default=TRUE)}
+\item{show_munster}{Logical, whether to show Muenster city boundaries (default=TRUE)}
 
 \item{show_landuse}{Logical, whether to show land use overlay (default=FALSE)}
 

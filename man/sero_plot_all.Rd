@@ -22,7 +22,7 @@ sero_plot_all(
 
 \item{show_grid}{Logical, whether to show grid cells (default=FALSE)}
 
-\item{show_munster}{Logical, whether to show Münster city boundaries (default=TRUE)}
+\item{show_munster}{Logical, whether to show Muenster city boundaries (default=TRUE)}
 
 \item{show_hotspots}{Logical, whether to show accident hotspots (default=TRUE)}
 

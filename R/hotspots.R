@@ -179,7 +179,7 @@ create_empty_hotspots <- function() {
 #'
 #' @param x sero_hotspots object
 #' @param data Original data for context (optional)
-#' @param show_munster Logical, whether to show Münster city boundaries (default=TRUE)
+#' @param show_munster Logical, whether to show Muenster city boundaries (default=TRUE)
 #' @param show_landuse Logical, whether to show land use overlay (default=FALSE)
 #' @param ... additional arguments (unused)
 #' @return ggplot2 object
@@ -199,7 +199,7 @@ plot.sero_hotspots <- function(x, data = NULL, show_munster = TRUE, show_landuse
   # Create base plot
   p <- ggplot2::ggplot()
   
-  # Add Münster city boundaries as base map (always use built-in districts)
+  # Add Muenster city boundaries as base map (always use built-in districts)
   if (show_munster) {
     tryCatch({
       # Load built-in districts if not provided in data
@@ -224,7 +224,7 @@ plot.sero_hotspots <- function(x, data = NULL, show_munster = TRUE, show_landuse
                                  size = 0.8)
       }
     }, error = function(e) {
-      warning("Could not load Münster districts: ", e$message)
+      warning("Could not load Muenster districts: ", e$message)
     })
   }
   
@@ -276,10 +276,10 @@ plot.sero_hotspots <- function(x, data = NULL, show_munster = TRUE, show_landuse
     ggplot2::scale_size_continuous(name = "Accident Count", range = c(3, 8)) +
     # Styling
     ggplot2::theme_minimal() +
-    ggplot2::labs(title = "Accident Hotspots - Münster",
+    ggplot2::labs(title = "Accident Hotspots - Muenster",
                  subtitle = paste("Total accidents:", x$summary$total_accidents,
                                  "| Hotspots:", x$summary$hotspot_count,
-                                 "| Base map: Münster districts"),
+                                 "| Base map: Muenster districts"),
                  x = "Longitude", y = "Latitude") +
     ggplot2::theme(
       legend.position = "bottom",
@@ -328,7 +328,7 @@ print.sero_hotspots <- function(x, ...) {
 
 #' Create accident heatmap based on number of accidents
 #'
-#' Creates a continuous heatmap showing accident density across Münster.
+#' Creates a continuous heatmap showing accident density across Muenster.
 #' Uses kernel density estimation to create smooth density surfaces.
 #'
 #' @param accidents sf object with accident data (must have UKATEGORIE column)
@@ -336,7 +336,7 @@ print.sero_hotspots <- function(x, ...) {
 #' @param bandwidth Kernel bandwidth for density estimation in meters (default=1000)
 #' @param grid_size Resolution of the heatmap grid in meters (default=100)
 #' @param data Original data for context (optional)
-#' @param show_munster Logical, whether to show Münster city boundaries (default=TRUE)
+#' @param show_munster Logical, whether to show Muenster city boundaries (default=TRUE)
 #' @param show_landuse Logical, whether to show land use overlay (default=FALSE)
 #' @param show_accidents Logical, whether to show individual accident points (default=TRUE)
 #' @param color_scheme Color scheme for heatmap: "viridis", "plasma", "inferno", "magma" (default="viridis")
@@ -453,7 +453,7 @@ sero_heatmap <- function(accidents,
   # Create base plot
   p <- ggplot2::ggplot()
   
-  # Add Münster city boundaries as base map
+  # Add Muenster city boundaries as base map
   if (show_munster) {
     tryCatch({
       # Load built-in districts if not provided in data
@@ -478,7 +478,7 @@ sero_heatmap <- function(accidents,
                                  size = 0.8)
       }
     }, error = function(e) {
-      warning("Could not load Münster districts: ", e$message)
+      warning("Could not load Muenster districts: ", e$message)
     })
   }
   
@@ -514,7 +514,7 @@ sero_heatmap <- function(accidents,
   
   # Add heatmap
   p <- p + ggplot2::geom_point(data = density_df,
-                              ggplot2::aes(x = x, y = y, color = density),
+                              ggplot2::aes(x = .data$x, y = .data$y, color = .data$density),
                               size = 1.5, alpha = 0.8)
   
   # Add individual accident points if requested
@@ -549,7 +549,7 @@ sero_heatmap <- function(accidents,
   # Styling
   p <- p + ggplot2::theme_minimal() +
     ggplot2::labs(
-      title = "Accident Density Heatmap - Münster",
+      title = "Accident Density Heatmap - Muenster",
       subtitle = paste("Total accidents:", nrow(high_risk_accidents),
                       "| Bandwidth:", bandwidth, "m",
                       "| Grid size:", grid_size, "m"),

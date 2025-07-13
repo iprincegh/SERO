@@ -41,7 +41,6 @@ sero_analyze <- function(risk_categories = c(1, 2),
   cat("Step 2: Computing optimal service locations using enhanced multi-criteria analysis...\n")
   locations <- sero_optimal(data, 
                            risk_categories = risk_categories,
-                           suitable_landuse = suitable_landuse,
                            max_locations = max_locations)
   
   # Step 3: Calculate routes

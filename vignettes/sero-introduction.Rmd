@@ -65,7 +65,7 @@ cat("Districts:", nrow(data$districts), "\n")
 
 ```{r}
 # Identify hotspots using point pattern analysis
-hotspots <- sero_identify_hotspots(
+hotspots <- sero_hotspots(
   data$accident,
   risk_categories = c(1, 2),  # Fatal and serious accidents
   buffer = 1000,              # 1km buffer for density estimation
@@ -92,15 +92,12 @@ The package uses 6 multi-criteria analysis criteria:
 
 ```{r}
 # Calculate optimal locations
-optimal_locations <- sero_calculate_optimal_locations(
+optimal_locations <- sero_optimal(
   data,
   max_locations = 3,
-  weight_accidents = 0.4,
-  weight_population = 0.2,
-  weight_roads = 0.15,
-  weight_landuse = 0.1,
-  weight_distance = 0.1,
-  weight_distribution = 0.05
+  accident_weight = 0.4,
+  population_weight = 0.2,
+  road_weight = 0.15,
 )
 
 print(optimal_locations)
@@ -114,7 +111,7 @@ plot(optimal_locations)
 
 ```{r}
 # Calculate routes from service locations to accidents
-routes <- sero_calculate_routes(
+routes <- sero_routes(
   optimal_locations, 
   data$accident, 
   max_routes = 10
@@ -167,14 +164,14 @@ plot(route)
 
 ```{r}
 # Fine-tuned hotspot analysis
-precise_hotspots <- sero_identify_hotspots(
+precise_hotspots <- sero_hotspots(
   data$accident,
   risk_categories = c(1, 2),
   buffer = 500,     # Smaller buffer for precise hotspots
   min_events = 3    # Lower threshold for more hotspots
 )
 
-broad_hotspots <- sero_identify_hotspots(
+broad_hotspots <- sero_hotspots(
   data$accident,
   risk_categories = c(1, 2),
   buffer = 1500,    # Larger buffer for regional hotspots
@@ -189,27 +186,21 @@ cat("Broad hotspots:", nrow(broad_hotspots$hotspots), "\n")
 
 ```{r}
 # Accident-focused optimization
-accident_focused <- sero_calculate_optimal_locations(
+accident_focused <- sero_optimal(
   data,
   max_locations = 5,
-  weight_accidents = 0.6,    # High weight on accident proximity
-  weight_population = 0.15,
-  weight_roads = 0.1,
-  weight_landuse = 0.05,
-  weight_distance = 0.05,
-  weight_distribution = 0.05
+  accident_weight = 0.6,    # High weight on accident proximity
+  population_weight = 0.15,
+  road_weight = 0.1,
 )
 
 # Population-focused optimization
-population_focused <- sero_calculate_optimal_locations(
+population_focused <- sero_optimal(
   data,
   max_locations = 5,
-  weight_accidents = 0.2,
-  weight_population = 0.5,   # High weight on population coverage
-  weight_roads = 0.15,
-  weight_landuse = 0.05,
-  weight_distance = 0.05,
-  weight_distribution = 0.05
+  accident_weight = 0.2,
+  population_weight = 0.5,   # High weight on population coverage
+  road_weight = 0.15,
 )
 
 cat("Accident-focused locations:", nrow(accident_focused$locations), "\n")

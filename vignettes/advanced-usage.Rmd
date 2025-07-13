@@ -43,7 +43,7 @@ buffer_results <- data.frame(
 )
 
 for (i in seq_along(buffer_values)) {
-  result <- sero_identify_hotspots(data$accident, buffer = buffer_values[i])
+  result <- sero_hotspots(data$accident, buffer = buffer_values[i])
   buffer_results$hotspots[i] <- nrow(result$hotspots)
   if (nrow(result$hotspots) > 0) {
     buffer_results$max_density[i] <- max(result$hotspots$density, na.rm = TRUE)
@@ -59,16 +59,13 @@ print(buffer_results)
 # Test different weight combinations
 weight_scenarios <- list(
   "Accident-focused" = list(
-    weight_accidents = 0.6, weight_population = 0.15, weight_roads = 0.1,
-    weight_landuse = 0.05, weight_distance = 0.05, weight_distribution = 0.05
+    weights = list(accident_weight = 0.6, population_weight = 0.15, road_weight = 0.1),
   ),
   "Population-focused" = list(
-    weight_accidents = 0.2, weight_population = 0.5, weight_roads = 0.15,
-    weight_landuse = 0.05, weight_distance = 0.05, weight_distribution = 0.05
+    weights = list(accident_weight = 0.2, population_weight = 0.5, road_weight = 0.15),
   ),
   "Balanced" = list(
-    weight_accidents = 0.3, weight_population = 0.25, weight_roads = 0.2,
-    weight_landuse = 0.1, weight_distance = 0.1, weight_distribution = 0.05
+    weights = list(accident_weight = 0.3, population_weight = 0.25, road_weight = 0.2),
   )
 )
 
@@ -80,7 +77,7 @@ weight_results <- data.frame(
 
 for (i in seq_along(weight_scenarios)) {
   params <- weight_scenarios[[i]]
-  result <- do.call(sero_calculate_optimal_locations, c(list(data = data, max_locations = 5), params))
+  result <- do.call(sero_optimal, c(list(data = data, max_locations = 5), params))
   weight_results$locations[i] <- nrow(result$locations)
   if (nrow(result$locations) > 0) {
     weight_results$avg_score[i] <- mean(result$locations$total_score, na.rm = TRUE)
@@ -103,7 +100,7 @@ urban_analysis <- sero_analyze(
 )
 
 # Custom hotspot analysis for urban areas
-urban_hotspots <- sero_identify_hotspots(
+urban_hotspots <- sero_hotspots(
   data$accident,
   buffer = 600,             # Smaller buffer for precise urban hotspots
   min_events = 3            # Lower threshold due to higher density
@@ -119,21 +116,20 @@ cat("- Routes calculated:", nrow(urban_analysis$routes$routes), "\n")
 
 ```{r}
 # Parameters optimized for rural/suburban areas
-suburban_hotspots <- sero_identify_hotspots(
+suburban_hotspots <- sero_hotspots(
   data$accident,
   buffer = 1500,            # Larger buffer for broader coverage
   min_events = 6            # Higher threshold for significance
 )
 
-suburban_locations <- sero_calculate_optimal_locations(
+suburban_locations <- sero_optimal(
   data,
   max_locations = 4,        # Fewer locations for broader coverage
   weight_accidents = 0.4,
   weight_population = 0.15,
   weight_roads = 0.25,      # Higher weight on road accessibility
-  weight_landuse = 0.1,
-  weight_distance = 0.05,
-  weight_distribution = 0.05
+  # Legacy parameter: weight_distance = 0.05,
+  # Legacy parameter: weight_distribution = 0.05
 )
 
 cat("Suburban Analysis Results:\n")
@@ -150,22 +146,19 @@ cat("- Optimal locations:", nrow(suburban_locations$locations), "\n")
 criteria_tests <- list(
   "Equal weights" = list(
     weight_accidents = 1/6, weight_population = 1/6, weight_roads = 1/6,
-    weight_landuse = 1/6, weight_distance = 1/6, weight_distribution = 1/6
   ),
   "Safety-focused" = list(
-    weight_accidents = 0.5, weight_population = 0.1, weight_roads = 0.15,
-    weight_landuse = 0.1, weight_distance = 0.1, weight_distribution = 0.05
+    weights = list(accident_weight = 0.5, population_weight = 0.1, road_weight = 0.15),
   ),
   "Coverage-focused" = list(
-    weight_accidents = 0.2, weight_population = 0.4, weight_roads = 0.1,
-    weight_landuse = 0.05, weight_distance = 0.05, weight_distribution = 0.2
+    weights = list(accident_weight = 0.2, population_weight = 0.4, road_weight = 0.1),
   )
 )
 
 for (scenario_name in names(criteria_tests)) {
   cat("\n", scenario_name, ":\n")
   params <- criteria_tests[[scenario_name]]
-  result <- do.call(sero_calculate_optimal_locations, c(list(data = data, max_locations = 3), params))
+  result <- do.call(sero_optimal, c(list(data = data, max_locations = 3), params))
   
   if (nrow(result$locations) > 0) {
     cat("- Locations found:", nrow(result$locations), "\n")
@@ -182,8 +175,8 @@ for (scenario_name in names(criteria_tests)) {
 
 ```{r}
 # Calculate comprehensive response analysis
-optimal_locs <- sero_calculate_optimal_locations(data, max_locations = 5)
-all_routes <- sero_calculate_routes(optimal_locs, data$accident, max_routes = 50)
+optimal_locs <- sero_optimal(data, max_locations = 5)
+all_routes <- sero_routes(optimal_locs, data$accident, max_routes = 50)
 
 # Analyze response times
 response_stats <- list(
@@ -251,7 +244,7 @@ for (i in seq_along(grid_sizes)) {
   start_time <- Sys.time()
   
   # Run with different grid sizes (if this parameter exists)
-  result <- sero_calculate_optimal_locations(
+  result <- sero_optimal(
     data,
     max_locations = 3
   )
@@ -271,8 +264,8 @@ print(grid_performance)
 
 ```{r}
 # Calculate validation metrics for optimal locations
-hotspots <- sero_identify_hotspots(data$accident)
-optimal_locs <- sero_calculate_optimal_locations(data, max_locations = 5)
+hotspots <- sero_hotspots(data$accident)
+optimal_locs <- sero_optimal(data, max_locations = 5)
 
 if (nrow(hotspots$hotspots) > 0 && nrow(optimal_locs$locations) > 0) {
   # Calculate distances from optimal locations to hotspots

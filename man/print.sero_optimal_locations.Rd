@@ -7,9 +7,9 @@
 \method{print}{sero_optimal_locations}(x, ...)
 }
 \arguments{
-\item{x}{sero_optimal_locations object}
-
 \item{...}{additional arguments (unused)}
+
+\item{object}{sero_optimal_locations object}
 }
 \description{
 Print method for sero_optimal_locations

@@ -27,7 +27,7 @@ sero_heatmap(
 
 \item{data}{Original data for context (optional)}
 
-\item{show_munster}{Logical, whether to show Münster city boundaries (default=TRUE)}
+\item{show_munster}{Logical, whether to show Muenster city boundaries (default=TRUE)}
 
 \item{show_landuse}{Logical, whether to show land use overlay (default=FALSE)}
 
@@ -39,7 +39,7 @@ sero_heatmap(
 ggplot2 object
 }
 \description{
-Creates a continuous heatmap showing accident density across Münster.
+Creates a continuous heatmap showing accident density across Muenster.
 Uses kernel density estimation to create smooth density surfaces.
 }
 \examples{

@@ -15,19 +15,19 @@
 )
 }
 \arguments{
-\item{x}{sero_optimal_locations object}
-
 \item{data}{Original data for context (optional)}
 
 \item{show_grid}{Logical, whether to show grid cells (default=FALSE)}
 
-\item{show_munster}{Logical, whether to show Münster city boundaries (default=TRUE)}
+\item{show_munster}{Logical, whether to show Muenster city boundaries (default=TRUE)}
 
 \item{show_hotspots}{Logical, whether to show accident hotspots (default=TRUE)}
 
 \item{show_landuse}{Logical, whether to show land use overlay (default=FALSE)}
 
 \item{...}{additional arguments (unused)}
+
+\item{object}{sero_optimal_locations object}
 }
 \value{
 ggplot2 object
