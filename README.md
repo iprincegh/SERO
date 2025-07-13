@@ -7,11 +7,12 @@ SERO is an R package for spatial emergency response optimization, designed to he
 
 ## Features
 
-- **Spatial Data Analysis**: Load and analyze spatial datasets in various formats
-- **Hotspot Detection**: Identify statistically significant spatial hotspots
-- **Interactive Visualization**: Create interactive maps and visualizations
-- **Route Optimization**: Optimize routing solutions for spatial problems
-- **Comprehensive Analysis**: Integrated workflow for complete spatial analysis
+- **Enhanced Hotspot Analysis**: Customizable intensity levels (low, medium, high) with kernel density estimation
+- **Advanced Optimal Location Finding**: Multiple algorithms (k-means, grid-based, density-based, hybrid)
+- **Interactive Emergency Routing**: Click-to-simulate accident locations with nearest service routing
+- **Comprehensive Spatial Visualization**: Munster district mapping with landuse integration
+- **Multi-layered Data Support**: Accidents, districts, roads, landuse, and population data
+- **Performance Metrics**: Distance analysis, coverage statistics, and response time estimation
 
 ## Installation
 
@@ -46,23 +47,37 @@ SERO depends on several R packages for spatial analysis and visualization:
 ```r
 library(SERO)
 
-# Load sample data
-data <- load_sample_data()
+# Load sample data (includes accidents, districts, roads, landuse, population)
+data <- sero_load_data()
 
-# Perform comprehensive SERO analysis
-results <- sero_analyze(data)
+# Enhanced hotspot analysis with customizable intensity
+hotspots <- sero_hotspot_analysis(data, intensity = "medium", include_landuse = TRUE)
+print(hotspots$plot)
 
-# Create interactive visualization
-sero_interactive(results)
+# Find optimal emergency service locations using advanced algorithms
+optimal_result <- sero_optimal_locations(data, num_locations = 3, method = "hybrid")
+print(optimal_result$plot)
 
-# Generate optimal routes
-optimal_routes <- sero_optimal(data, method = "genetic")
+# Interactive emergency routing (click on map to simulate new accidents)
+interactive_map <- create_interactive_routing_map(data)
 
-# Visualize results
-sero_visualization(results, type = "hotspots")
+# Simulate emergency response to a new accident
+route_result <- sero_emergency_routing(
+  data, 
+  new_accident_coords = c(longitude, latitude),
+  routing_method = "road_network"
+)
+print(route_result$plot)
 ```
 
 ## Main Functions
+
+### Enhanced Analysis Functions
+
+- `sero_hotspot_analysis()` - Advanced hotspot detection with customizable intensity levels
+- `sero_optimal_locations()` - Multi-algorithm optimal location finding (k-means, grid, density, hybrid)
+- `sero_emergency_routing()` - Emergency response routing with multiple methods
+- `create_interactive_routing_map()` - Interactive map for accident simulation and routing
 
 ### Core Analysis Functions
 
@@ -79,22 +94,60 @@ sero_visualization(results, type = "hotspots")
 
 ### Data Functions
 
+- `sero_load_data()` - Load built-in Munster dataset
 - `load_sample_data()` - Load sample datasets
 - `identify_hotspots()` - Hotspot detection and analysis
 
 ## Examples
 
-### Basic Hotspot Analysis
+### Enhanced Hotspot Analysis with Customizable Intensity
 
 ```r
-# Load your spatial data
-data <- load_sample_data()
+# Load Munster city data
+data <- sero_load_data()
 
-# Identify hotspots
-hotspots <- identify_hotspots(data, method = "kernel")
+# Analyze accident hotspots with different intensity levels
+low_intensity <- sero_hotspot_analysis(data, intensity = "low", include_landuse = TRUE)
+medium_intensity <- sero_hotspot_analysis(data, intensity = "medium", include_landuse = TRUE)
+high_intensity <- sero_hotspot_analysis(data, intensity = "high", include_landuse = TRUE)
 
-# Visualize hotspots
-sero_visualization(hotspots, type = "hotspots")
+# View results
+print(medium_intensity$plot)
+print(medium_intensity$stats)
+```
+
+### Advanced Optimal Location Finding
+
+```r
+# Find optimal emergency service locations using different algorithms
+kmeans_result <- sero_optimal_locations(data, num_locations = 3, method = "kmeans")
+density_result <- sero_optimal_locations(data, num_locations = 3, method = "density")
+hybrid_result <- sero_optimal_locations(data, num_locations = 3, method = "hybrid")
+
+# Compare performance metrics
+print(hybrid_result$performance)
+print(hybrid_result$plot)
+```
+
+### Interactive Emergency Routing
+
+```r
+# Create interactive map for accident simulation
+interactive_map <- create_interactive_routing_map(data)
+
+# Simulate emergency response (replace coordinates with actual accident location)
+route_result <- sero_emergency_routing(
+  data = data,
+  new_accident_coords = c(7.5, 51.9),  # Longitude, Latitude
+  routing_method = "road_network",
+  include_roads = TRUE
+)
+
+# View routing results
+print(route_result$plot)
+cat("Nearest service:", route_result$statistics$nearest_location_id)
+cat("Distance:", route_result$statistics$distance_km, "km")
+cat("Estimated time:", route_result$statistics$estimated_travel_time_min, "minutes")
 ```
 
 ### Interactive Dashboard
@@ -102,21 +155,6 @@ sero_visualization(hotspots, type = "hotspots")
 ```r
 # Launch interactive dashboard
 sero_interactive(data)
-```
-
-### Route Optimization
-
-```r
-# Optimize routes using genetic algorithm
-optimal_solution <- sero_optimal(
-  data = data,
-  method = "genetic",
-  population_size = 100,
-  generations = 50
-)
-
-# Visualize optimized routes
-sero_routes(optimal_solution)
 ```
 
 ## Documentation

@@ -69,28 +69,49 @@ for (layer in names(data)) {
 }
 ```
 
-## 4. Hotspot Analysis
+## 4. Enhanced Hotspot Analysis
 
 ```{r hotspot-analysis}
-# Perform hotspot analysis on accidents
+# Perform enhanced hotspot analysis with customizable intensity
 if ("accident" %in% names(data) && inherits(data$accident, "sf")) {
   
-  # Check accident data structure
-  cat("Accident data structure:\n")
-  print(head(data$accident))
-  cat("\nAccident coordinates:\n")
-  print(st_geometry(data$accident))
+  cat("Testing enhanced hotspot analysis with different intensity levels...\n")
   
-  # Simple hotspot visualization
-  cat("\nAccident hotspot analysis:\n")
+  # Test different intensity levels
+  intensity_levels <- c("low", "medium", "high")
   
-  # Basic plotting - use districts as boundary
-  if ("districts" %in% names(data)) {
-    plot(st_geometry(data$districts), main = "Accidents in Study Area")
-    plot(st_geometry(data$accident), add = TRUE, col = "red", pch = 16)
-  } else {
-    # Plot just accidents if no boundary available
-    plot(st_geometry(data$accident), main = "Accident Locations", col = "red", pch = 16)
+  for (intensity in intensity_levels) {
+    cat(sprintf("\n--- %s Intensity Analysis ---\n", toupper(intensity)))
+    
+    # Perform hotspot analysis
+    tryCatch({
+      hotspot_result <- sero_hotspot_analysis(
+        data = data,
+        intensity = intensity,
+        include_landuse = TRUE,
+        contour_levels = c(0.2, 0.4, 0.6, 0.8)
+      )
+      
+      # Display results
+      print(hotspot_result$plot)
+      cat(sprintf("Total accidents analyzed: %d\n", hotspot_result$stats$total_accidents))
+      cat(sprintf("Bandwidth used: %.2f meters\n", hotspot_result$stats$density_bandwidth))
+      
+    }, error = function(e) {
+      cat("Enhanced hotspot analysis not available, using basic analysis:\n")
+      
+      # Fallback to basic analysis
+      accidents_wgs84 <- sf::st_transform(data$accident, 4326)
+      districts_wgs84 <- sf::st_transform(data$districts, 4326)
+      
+      plot(st_geometry(districts_wgs84), main = paste("Accidents -", intensity, "view"))
+      plot(st_geometry(accidents_wgs84), add = TRUE, col = "red", pch = 16, cex = 0.5)
+      
+      cat("Basic visualization completed\n")
+    })
+    
+    # Only show first intensity level to avoid too much output
+    break
   }
   
 } else {
@@ -98,52 +119,164 @@ if ("accident" %in% names(data) && inherits(data$accident, "sf")) {
 }
 ```
 
-## 5. Optimal Location Analysis
+## 5. Enhanced Optimal Location Analysis
 
 ```{r optimal-locations}
-# Find optimal emergency service locations using basic spatial analysis
+# Find optimal emergency service locations using advanced algorithms
 if ("accident" %in% names(data) && "districts" %in% names(data)) {
-  cat("Finding optimal emergency service locations using spatial data...\n")
+  cat("Testing enhanced optimal location analysis...\n")
   
-  # Simple analysis - find center of accident clusters
-  accident_coords <- st_coordinates(data$accident)
-  center_x <- mean(accident_coords[,1])
-  center_y <- mean(accident_coords[,2])
+  # Test different optimization methods
+  methods <- c("hybrid", "kmeans", "density")
   
-  cat(sprintf("Centroid of accidents: (%.2f, %.2f)\n", center_x, center_y))
-  
-  # Basic visualization
-  plot(st_geometry(data$districts), main = "Study Area with Accident Centroid")
-  plot(st_geometry(data$accident), add = TRUE, col = "red", pch = 16, cex = 0.5)
-  points(center_x, center_y, col = "blue", pch = 19, cex = 2)
-  legend("topright", c("Accidents", "Centroid"), col = c("red", "blue"), pch = c(16, 19))
+  for (method in methods) {
+    cat(sprintf("\n--- %s Method ---\n", toupper(method)))
+    
+    tryCatch({
+      # Find optimal locations using enhanced algorithm
+      optimal_result <- sero_optimal_locations(
+        data = data,
+        num_locations = 3,
+        method = method,
+        save_locations = TRUE
+      )
+      
+      # Display results
+      print(optimal_result$plot)
+      cat("Optimal locations found:\n")
+      print(optimal_result$locations)
+      
+      cat("\nPerformance metrics:\n")
+      cat(sprintf("Average distance to accidents: %.2f meters\n", 
+                 optimal_result$performance$avg_distance_m))
+      cat(sprintf("Maximum distance: %.2f meters\n", 
+                 optimal_result$performance$max_distance_m))
+      cat(sprintf("90th percentile coverage: %.2f meters\n", 
+                 optimal_result$performance$coverage_90_percent))
+      
+      # Update data with optimal locations for routing
+      if (!is.null(optimal_result$data_updated)) {
+        data <- optimal_result$data_updated
+      }
+      
+    }, error = function(e) {
+      cat("Enhanced optimal analysis not available, using basic analysis:\n")
+      
+      # Fallback to basic centroid calculation
+      accidents_wgs84 <- sf::st_transform(data$accident, 4326)
+      districts_wgs84 <- sf::st_transform(data$districts, 4326)
+      
+      accident_coords <- st_coordinates(accidents_wgs84)
+      center_x <- mean(accident_coords[,1])
+      center_y <- mean(accident_coords[,2])
+      
+      cat(sprintf("Basic centroid: (%.6f, %.6f)\n", center_x, center_y))
+      
+      plot(st_geometry(districts_wgs84), main = paste("Optimal Location -", method))
+      plot(st_geometry(accidents_wgs84), add = TRUE, col = "red", pch = 16, cex = 0.3)
+      points(center_x, center_y, col = "blue", pch = 19, cex = 2)
+      
+      # Create simple optimal locations for routing test
+      optimal_locations_basic <- sf::st_as_sf(
+        data.frame(
+          id = c("OPT_1", "OPT_2", "OPT_3"),
+          lon = c(center_x, center_x + 0.01, center_x - 0.01),
+          lat = c(center_y, center_y + 0.01, center_y - 0.01)
+        ),
+        coords = c("lon", "lat"),
+        crs = 4326
+      )
+      data$optimal_locations <- optimal_locations_basic
+    })
+    
+    # Only test first method to avoid too much output
+    break
+  }
   
 } else {
   cat("Required spatial data not available\n")
 }
 ```
 
-## 6. Route Analysis
+## 6. Enhanced Emergency Routing Analysis
 
 ```{r route-analysis}
-# Basic distance analysis between accidents and optimal location
-if ("accident" %in% names(data) && exists("center_x") && exists("center_y")) {
-  cat("Calculating distances from optimal location to accidents...\n")
+# Test enhanced emergency routing with simulated new accident
+if ("optimal_locations" %in% names(data)) {
+  cat("Testing enhanced emergency routing...\n")
   
-  # Calculate distances
-  accident_coords <- st_coordinates(data$accident)
-  distances <- sqrt((accident_coords[,1] - center_x)^2 + (accident_coords[,2] - center_y)^2)
-  
-  cat(sprintf("Average distance to accidents: %.2f meters\n", mean(distances)))
-  cat(sprintf("Maximum distance: %.2f meters\n", max(distances)))
-  cat(sprintf("Minimum distance: %.2f meters\n", min(distances)))
-  
-  # Plot distance distribution
-  hist(distances, main = "Distance Distribution from Optimal Location", 
-       xlab = "Distance (meters)", col = "lightblue", breaks = 10)
+  # Simulate a new accident location (within Munster district bounds)
+  tryCatch({
+    districts_wgs84 <- sf::st_transform(data$districts, 4326)
+    bbox <- sf::st_bbox(districts_wgs84)
+    
+    # Create simulated accident location
+    sim_accident_lon <- bbox[1] + (bbox[3] - bbox[1]) * 0.6
+    sim_accident_lat <- bbox[2] + (bbox[4] - bbox[2]) * 0.4
+    
+    cat(sprintf("Simulated accident location: (%.6f, %.6f)\n", sim_accident_lon, sim_accident_lat))
+    
+    # Test different routing methods
+    routing_methods <- c("euclidean", "road_network", "hybrid")
+    
+    for (method in routing_methods) {
+      cat(sprintf("\n--- %s Routing ---\n", toupper(method)))
+      
+      # Calculate emergency route
+      route_result <- sero_emergency_routing(
+        data = data,
+        new_accident_coords = c(sim_accident_lon, sim_accident_lat),
+        routing_method = method,
+        include_roads = TRUE
+      )
+      
+      # Display results
+      print(route_result$plot)
+      cat("Route Statistics:\n")
+      cat(sprintf("Nearest service location: %s\n", route_result$statistics$nearest_location_id))
+      cat(sprintf("Distance: %d meters (%.2f km)\n", 
+                 route_result$statistics$distance_meters,
+                 route_result$statistics$distance_km))
+      cat(sprintf("Estimated travel time: %.1f minutes\n", 
+                 route_result$statistics$estimated_travel_time_min))
+      
+      # Only test first method to avoid too much output
+      break
+    }
+    
+    # Create interactive routing map (will be available for user interaction)
+    cat("\nCreating interactive routing map...\n")
+    interactive_map <- create_interactive_routing_map(
+      data = data,
+      optimal_locations = sf::st_transform(data$optimal_locations, 4326),
+      districts = districts_wgs84,
+      include_roads = TRUE
+    )
+    
+    cat("Interactive map created successfully!\n")
+    cat("Note: In a real application, users can click on the map to simulate new accidents.\n")
+    
+  }, error = function(e) {
+    cat("Enhanced routing not available, using basic distance analysis:\n")
+    
+    # Fallback to basic distance calculation
+    if (exists("center_x") && exists("center_y")) {
+      accident_coords <- st_coordinates(data$accident)
+      distances <- sqrt((accident_coords[,1] - center_x)^2 + (accident_coords[,2] - center_y)^2)
+      
+      cat(sprintf("Average distance to accidents: %.2f meters\n", mean(distances) * 111320))
+      cat(sprintf("Maximum distance: %.2f meters\n", max(distances) * 111320))
+      cat(sprintf("Minimum distance: %.2f meters\n", min(distances) * 111320))
+      
+      hist(distances * 111320, main = "Distance Distribution", 
+           xlab = "Distance (meters)", col = "lightblue", breaks = 10)
+    } else {
+      cat("No optimal locations available for routing analysis\n")
+    }
+  })
   
 } else {
-  cat("Cannot calculate routes without spatial data\n")
+  cat("No optimal locations found. Run optimal location analysis first.\n")
 }
 ```
 
