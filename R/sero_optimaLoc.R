@@ -447,17 +447,8 @@ sero_emergency_workflow <- function(interactive = FALSE, quick = TRUE, num_locat
   print(accident_map)
   print(optimal_map)
   
-  # Step 6: Interactive mode
-  if (interactive && requireNamespace("shiny", quietly = TRUE)) {
-    cat("\nStep 6: Launching interactive mode...\n")
-    tryCatch({
-      sero_interactive_routing(optimal_locations)
-    }, error = function(e) {
-      cat("Interactive mode error:", e$message, "\n")
-    })
-  }
-  
-  # Return results
+  # Package simplified - interactive features removed
+  # Returning results without interactive mode
   results <- list(
     data = data,
     optimal_locations = optimal_locations,
