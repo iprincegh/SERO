@@ -1,7 +1,7 @@
 ---
 title: "Introduction to SERO"
 author: "SERO Team"
-date: "2025-07-13"
+date: "2025-07-18"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Introduction to SERO}
@@ -11,7 +11,7 @@ vignette: >
 
 # Overview
 
-SERO is an R package for fast, robust emergency service location optimization and mapping. This vignette demonstrates the main workflow and visualization features.
+SERO (Spatial Emergency Response Optimization) is a simplified R package for emergency service location optimization and accident risk analysis. This vignette demonstrates the core functionality including hotspot analysis, kernel density analysis, optimal location finding, and route optimization.
 
 ## Quick Start
 
@@ -19,99 +19,208 @@ SERO is an R package for fast, robust emergency service location optimization an
 library(SERO)
 
 # Load example data
-example_data <- sero_load_data()
+data <- sero_load_data()
 
 # Find optimal locations
-optimal <- sero_find_optimal_locations(example_data)
+optimal <- sero_find_optimal_locations(data, num_locations = 5)
 
 # Plot results
-sero_plot_optimal_locations(optimal)
+sero_plot_optimal_quick(optimal)
 ```
 
-## Full Workflow Example
+## Core Functionality
+
+### 1. Data Loading and Validation
 
 ```r
-# Complete workflow with interactive mode
-results <- sero_complete_workflow(launch_interactive = FALSE, quick = TRUE, num_locations = 5)
+# Load Münster dataset
+data <- sero_load_data()
+
+# Validate data structure
+sero_validate_data(data)
+```
+
+### 2. Hotspot Analysis
+
+```r
+# Identify accident hotspots
+hotspots <- sero_hotspots(data$accident, 
+                         risk_categories = c(1, 2), 
+                         bandwidth = 1000)
+
+# Visualize hotspots
+print(hotspots$plot)
+```
+
+### 3. Kernel Density Analysis (Heatmaps)
+
+```r
+# Create accident heatmap
+heatmap <- sero_heatmap(data$accident, 
+                       risk_categories = c(1, 2),
+                       bandwidth = 1000)
+
+# Compare different risk categories
+comparison <- sero_heatmap_compare(data$accident, 
+                                  data = data,
+                                  risk_categories = c(1, 2, 3))
+```
+
+### 4. Optimal Location Finding
+
+```r
+# Find optimal emergency service locations
+optimal <- sero_find_optimal_locations(data, 
+                                      num_locations = 5,
+                                      risk_categories = c(1, 2))
+
+# Quick visualization
+sero_plot_optimal_quick(optimal)
+```
+
+### 5. Route Optimization
+
+```r
+# Calculate routes from optimal locations to accidents
+routes <- sero_routes(optimal$locations, 
+                     data$accident, 
+                     max_routes = 10)
+
+# Visualize routes
+print(routes$plot)
+```
+
+## Visualization Functions
+
+```r
+# Plot accident locations by severity
+sero_plot_acc(data, risk_categories = c(1, 2, 3))
+
+# Plot population density
+sero_plot_pop(data)
+
+# Plot base districts
+sero_plot_base(data)
+
+# Plot land use
+sero_plot_land(data)
+
+# Plot road network
+sero_plot_roads(data)
+```
+
+## Emergency Workflow
+
+```r
+# Complete analysis workflow
+results <- sero_emergency_workflow(interactive = FALSE, 
+                                  quick = TRUE, 
+                                  num_locations = 5)
+
 summary(results)
 ```
 
-## Visualizations
+## Saving and Loading Results
 
 ```r
-# Accident map
-sero_plot_acc(example_data)
+# Save optimal locations
+sero_save_locations(optimal$locations, "my_locations.gpkg")
 
-# Population map
-sero_plot_pop(example_data)
-```
-
-## Saving Results
-
-```r
-sero_save_optimal_locations(optimal, db_path = "inst/gpkg/dataset.gpkg")
+# Load saved locations
+loaded_locations <- sero_load_locations("my_locations.gpkg")
 ```
 
 # More Information
 
-See the package documentation and help files for details on each function.
+See the package documentation and help files for details on each function:
+
+```r
+# Function help
+?sero_load_data
+?sero_hotspots
+?sero_heatmap
+?sero_find_optimal_locations
+?sero_routes
+
+# Package help
+help(package = "SERO")
+```
 
 ---
 
-## Package Testing & Assessment
+## Package Assessment
 
-The SERO package has undergone comprehensive testing to ensure speed, reliability, and usability for emergency response optimization. Below is a summary of the package's capabilities and recommendations for users:
+The SERO package provides comprehensive emergency response optimization capabilities with the following core features:
 
-### Core Requirements Met
+### Core Features
 
-All core optimization and mapping functions are operational and production-ready. Performance targets are met, and the package is suitable for real-world deployment.
+All essential optimization and analysis functions are operational and ready for production use:
 
-### Overall Assessment
+- **Hotspot Analysis**: Identify accident concentration areas with spatial clustering
+- **Kernel Density Analysis**: Generate smooth risk surfaces with customizable heatmaps
+- **Optimal Location Finding**: Strategic emergency service placement using K-means optimization
+- **Route Optimization**: Emergency response route calculation with distance/time estimation
+- **Comprehensive Visualizations**: Professional maps and analysis outputs
 
-- **Production Ready**: All core optimizations operational
-- **Function Availability**: Excellent
-- **Performance**: Targets met (optimal locations calculated in seconds)
-- **Reliability**: Static visualizations always work
-- **Usability**: One-line functions for complex operations
-- **Professional**: Ready for emergency response optimization
+### Package Status
 
-### User Recommendations
+- **Production Ready**: All core functions operational
+- **Performance**: Fast execution (optimal locations calculated in seconds)
+- **Reliability**: Robust error handling and data validation
+- **Usability**: Simple, intuitive function interfaces
+- **Documentation**: Comprehensive help and examples
 
-1. **Quick Demo**: `sero_quick_demo()` for instant results
-2. **Full Analysis**: `sero_complete_workflow()`
-3. **Custom Optimization**: `sero_find_optimal_locations()`
-4. **Mapping**: `sero_plot_accidents()` and `sero_plot_optimal_quick()`
-5. **Emergency Mode**: `sero_emergency_workflow()`
+### Quick Start Recommendations
 
-If any core packages are missing, install them with:
+1. **Data Loading**: Start with `sero_load_data()` to load example data
+2. **Hotspot Analysis**: Use `sero_hotspots()` for accident concentration analysis
+3. **Heatmap Generation**: Use `sero_heatmap()` for kernel density visualization
+4. **Optimal Locations**: Use `sero_find_optimal_locations()` for service placement
+5. **Route Analysis**: Use `sero_routes()` for emergency response routing
+6. **Complete Workflow**: Use `sero_emergency_workflow()` for integrated analysis
+
+### Installation Requirements
+
 ```r
-install.packages(c('sf', 'ggplot2', 'dplyr'))
+# Install required dependencies
+install.packages(c('sf', 'ggplot2', 'dplyr', 'cluster'))
+
+# Install SERO package
+# (from local source or repository)
 ```
 
 ### Package Information
 
-- **SERO Version**: `r as.character(packageVersion("SERO"))`
-- **Total Exported Functions**: `r length(getNamespaceExports("SERO"))`
-- **Test Date**: `r Sys.Date()`
+- **SERO Version**: `r tryCatch(as.character(packageVersion("SERO")), error = function(e) "Development")`
+- **Total Exported Functions**: `r tryCatch(length(getNamespaceExports("SERO")), error = function(e) "Available after installation")`
+- **Last Updated**: `r Sys.Date()`
 - **R Version**: `r R.version.string`
 
-### Optimization Success Summary
+### Key Functions Summary
 
-- **Speed**: Optimal locations calculated in seconds (not minutes)
-- **Reliability**: Static visualizations always work
-- **Usability**: One-line functions for complex operations
-- **Professional**: Production-ready emergency response tools
+| Function | Purpose |
+|----------|---------|
+| `sero_load_data()` | Load example Münster dataset |
+| `sero_validate_data()` | Validate data structure |
+| `sero_hotspots()` | Accident hotspot analysis |
+| `sero_heatmap()` | Kernel density heatmaps |
+| `sero_find_optimal_locations()` | Optimal service placement |
+| `sero_routes()` | Route optimization |
+| `sero_emergency_workflow()` | Complete analysis workflow |
+| `sero_plot_*()` | Visualization functions |
 
 ---
 
-## Mission Accomplished
+## Summary
 
-SERO now provides lightning-fast spatial emergency response optimization:
+SERO provides efficient spatial emergency response optimization with:
 
-- ⚡ **Speed**: Optimal locations calculated in seconds
-- 🛡️ **Reliability**: Static visualizations always work
-- 👤 **User-Friendly**: Simple one-line functions for complex operations
-- 🏆 **Professional**: Production-ready emergency response tools
-- 📊 **Performance**: Comprehensive testing and validation
+- ⚡ **Fast Analysis**: Optimal locations calculated in seconds
+- 🎯 **Comprehensive**: Hotspots, heatmaps, optimization, and routing
+- �️ **Reliable**: Robust error handling and data validation
+- 📊 **Visual**: Professional maps and analysis outputs
+- 🔧 **Simple**: Intuitive function interfaces
 
-**Ready for deployment in real emergency response scenarios.** 🚀
+**Ready for emergency response optimization and spatial analysis.** �
+
+For complete examples and demonstrations, see the `inst/examples/` directory in the package installation.

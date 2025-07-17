@@ -37,10 +37,26 @@ sero_load_data <- function() {
     
     data <- list()
     
-    # Load each layer
+    # Load each layer with proper naming
     for (layer in layers$name) {
       cat("Loading", layer, "...\n")
-      data[[layer]] <- sf::st_read(data_path, layer = layer, quiet = TRUE)
+      layer_data <- sf::st_read(data_path, layer = layer, quiet = TRUE)
+      
+      # Map layer names to expected names
+      if (layer == "accidents") {
+        data$accident <- layer_data
+      } else if (layer == "munster_districtsshp") {
+        data$districts <- layer_data
+      } else if (layer == "population_density") {
+        data$population <- layer_data
+      } else if (layer == "munster_roadsshp") {
+        data$roads <- layer_data
+      } else if (layer == "munster_landuseshp") {
+        data$landuse <- layer_data
+      } else {
+        # Keep original name for other layers
+        data[[layer]] <- layer_data
+      }
     }
     
     cat("Data loaded successfully!\n")
