@@ -3,22 +3,22 @@
 [![R Package](https://img.shields.io/badge/R-Package-blue.svg)](https://www.r-project.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-SERO is an R package for spatial emergency response optimization, designed to help researchers and practitioners analyze spatial data, identify hotspots, and optimize routing solutions for various applications.
+SERO is an R package for spatial emergency response optimization, designed to help researchers and practitioners analyze accident patterns, identify hotspots, and optimize emergency service locations using existing spatial data.
 
-## ✨ Enhanced Features
+## ✨ Core Features
 
-- **🗺️ Professional Accident Visualization**: OSM basemap integration, severity filtering, landuse visualization
-- **🎯 Advanced Optimal Location Finding**: Multiple algorithms (k-means, grid-based, density-based, hybrid) with spatialite database storage
-- **🚨 Interactive Emergency Routing**: Real-time click-to-simulate functionality with OSRM routing engine
-- **🎨 Professional Map Styling**: Toggleable layers, custom emergency markers, performance metrics dashboard
-- **💾 Database Integration**: Spatialite storage for persistent optimal locations with fast querying
-- **📊 Comprehensive Analytics**: Distance analysis, coverage statistics, response time estimation, and hotspot intensity mapping
+- **🎯 Hotspot Analysis**: Identify accident concentration areas using spatial clustering
+- **�️ Kernel Density Analysis**: Generate smooth risk surfaces for strategic planning
+- **� Risk Parameter Visualization**: Plot various accident risk metrics and patterns
+- **� Optimal Location Finding**: Determine best emergency service locations using k-means optimization
+- **� Route Calculation**: Calculate routes to optimal locations using existing accident data
+- **� Performance Metrics**: Comprehensive analysis of coverage and response times
 
-## 🚀 Quick Status
-- ✅ **Package Version**: 0.1.0 installed and functional
-- ✅ **Core Functions**: Professional mapping, optimal location analysis, interactive routing
-- ✅ **Database Support**: Spatialite integration for data persistence
-- ✅ **Interactive System**: Full shiny-based emergency response simulator
+## 🚀 Package Status
+- ✅ **Package Version**: 0.1.0 - Simplified and Clean
+- ✅ **Core Functions**: Hotspot analysis, kernel density, optimal locations, routing
+- ✅ **No Interactive Dependencies**: Focused on core analytical functionality
+- ✅ **Clean Package Structure**: 6 core R files, comprehensive documentation
 
 ## Installation
 
@@ -28,11 +28,8 @@ You can install the development version of SERO from GitHub:
 # Install devtools if you haven't already
 install.packages("devtools")
 
-# Install SERO from GitHub (main branch - default)
+# Install SERO from GitHub
 devtools::install_github("iprincegh/SERO")
-
-# Or install from master branch
-devtools::install_github("iprincegh/SERO@master")
 ```
 
 ## Dependencies
@@ -42,137 +39,204 @@ SERO depends on several R packages for spatial analysis and visualization:
 - `sf` - Simple Features for R
 - `dplyr` - Data manipulation
 - `ggplot2` - Data visualization
-- `leaflet` - Interactive maps
-- `DT` - Interactive tables
-- `shiny` - Web applications
-- `shinydashboard` - Dashboard framework
-- `plotly` - Interactive plots
+- `rlang` - Programming tools
+- `magrittr` - Pipe operators
 
 ## ⚡ Quick Start
 
 ```r
 library(SERO)
 
-# 🚀 Complete professional workflow
-results <- sero_complete_workflow(launch_interactive = FALSE)
-
-# 🎯 Quick demo with all features
-sero_quick_demo(interactive = TRUE)
-
-# 🗺️ Professional accident visualization with severity filtering
+# Load the built-in Münster dataset
 data <- sero_load_data()
-accident_map <- sero_plot_accidents(
+
+# Run complete emergency response workflow
+results <- sero_emergency_workflow(
+  interactive = FALSE,
+  quick = TRUE,
+  num_locations = 5,
+  risk_categories = c(1, 2)  # Fatal and serious accidents
+)
+
+# Analyze accident hotspots
+hotspots <- sero_hotspots(
   accidents = data$accident,
-  districts = data$districts,
-  landuse = data$landuse,
-  severity_levels = c(1, 2),  # Fatal and serious only
-  use_osm_basemap = TRUE
-)
-
-# 🏥 Advanced optimal location analysis with database storage
-optimal_locs <- sero_calculate_optimal_locations(
-  data = data,
-  grid_size = 200,
   risk_categories = c(1, 2),
-  save_to_db = TRUE,
-  db_path = "emergency_bases.sqlite"
+  buffer = 800,
+  min_events = 3
 )
 
-# 🚨 Interactive emergency routing system
-sero_interactive_routing(
-  optimal_locations = optimal_locs,
-  roads = data$roads,
-  districts = data$districts,
-  landuse = data$landuse,
-  accidents = data$accident
+# Generate kernel density heatmap
+heatmap <- sero_heatmap(
+  accidents = data$accident,
+  risk_categories = c(1, 2),
+  bandwidth = 800,
+  data = data
+)
+
+# Find optimal emergency service locations
+optimal_locations <- sero_find_optimal_locations(
+  data = data,
+  num_locations = 6,
+  method = "fast",
+  risk_categories = c(1, 2)
+)
+
+# Calculate routes to optimal locations
+sample_accidents <- data$accident[1:10, ]
+routes <- sero_routes(
+  optimal_locations = optimal_locations,
+  accidents = sample_accidents,
+  data = data
 )
 ```
 
 ## Main Functions
 
-### Enhanced Analysis Functions
-
-- `sero_hotspot_analysis()` - Advanced hotspot detection with customizable intensity levels
-- `sero_optimal_locations()` - Multi-algorithm optimal location finding (k-means, grid, density, hybrid)
-- `sero_emergency_routing()` - Emergency response routing with multiple methods
-- `create_interactive_routing_map()` - Interactive map for accident simulation and routing
-
 ### Core Analysis Functions
 
-- `sero_analyze()` - Comprehensive spatial analysis workflow
-- `sero_main()` - Main analysis function with customizable parameters
-- `sero_optimal()` - Optimization algorithms for routing problems
-- `sero_routes()` - Route generation and analysis
+- `sero_load_data()` - Load built-in Münster spatial dataset
+- `sero_validate_data()` - Validate spatial data structure
+- `sero_hotspots()` - Identify accident hotspots using spatial clustering
+- `sero_heatmap()` - Generate kernel density maps and risk surfaces
+- `sero_find_optimal_locations()` - Find optimal emergency service locations
+- `sero_routes()` - Calculate emergency response routes
+- `sero_emergency_workflow()` - Complete analysis workflow
 
 ### Visualization Functions
 
-- `sero_visualization()` - Create static visualizations
-- `sero_interactive()` - Launch interactive dashboard
-- `create_leaflet_map()` - Generate interactive maps
+- `sero_plot_accidents()` - Plot accident locations with severity filtering
+- `sero_plot_optimal_quick()` - Quick visualization of optimal locations
+- `sero_heatmap_compare()` - Compare different risk categories
+- `plot.sero_hotspots()` - Plot hotspot analysis results
+- `plot.sero_routes()` - Visualize emergency response routes
 
-### Data Functions
+### Utility Functions
 
-- `sero_load_data()` - Load built-in Munster dataset
-- `load_sample_data()` - Load sample datasets
-- `identify_hotspots()` - Hotspot detection and analysis
+- `sero_heatmap_presets()` - Predefined heatmap configurations
+- `print.sero_hotspots()` - Print hotspot analysis summary
+- `print.sero_routes()` - Print route analysis summary
 
 ## Examples
 
-### Enhanced Hotspot Analysis with Customizable Intensity
+### Comprehensive Analysis Workflow
 
 ```r
-# Load Munster city data
+# Load Münster emergency response data
 data <- sero_load_data()
 
-# Analyze accident hotspots with different intensity levels
-low_intensity <- sero_hotspot_analysis(data, intensity = "low", include_landuse = TRUE)
-medium_intensity <- sero_hotspot_analysis(data, intensity = "medium", include_landuse = TRUE)
-high_intensity <- sero_hotspot_analysis(data, intensity = "high", include_landuse = TRUE)
+# Validate data structure
+if (sero_validate_data(data)) {
+  cat("✅ Data validation successful!")
+}
 
-# View results
-print(medium_intensity$plot)
-print(medium_intensity$stats)
-```
-
-### Advanced Optimal Location Finding
-
-```r
-# Find optimal emergency service locations using different algorithms
-kmeans_result <- sero_optimal_locations(data, num_locations = 3, method = "kmeans")
-density_result <- sero_optimal_locations(data, num_locations = 3, method = "density")
-hybrid_result <- sero_optimal_locations(data, num_locations = 3, method = "hybrid")
-
-# Compare performance metrics
-print(hybrid_result$performance)
-print(hybrid_result$plot)
-```
-
-### Interactive Emergency Routing
-
-```r
-# Create interactive map for accident simulation
-interactive_map <- create_interactive_routing_map(data)
-
-# Simulate emergency response (replace coordinates with actual accident location)
-route_result <- sero_emergency_routing(
-  data = data,
-  new_accident_coords = c(7.5, 51.9),  # Longitude, Latitude
-  routing_method = "road_network",
-  include_roads = TRUE
+# Complete workflow analysis
+results <- sero_emergency_workflow(
+  interactive = FALSE,
+  quick = TRUE,
+  num_locations = 5,
+  risk_categories = c(1, 2)
 )
 
-# View routing results
-print(route_result$plot)
-cat("Nearest service:", route_result$statistics$nearest_location_id)
-cat("Distance:", route_result$statistics$distance_km, "km")
-cat("Estimated time:", route_result$statistics$estimated_travel_time_min, "minutes")
+# Access results
+print(results$optimal_locations)
+print(results$accident_map)
+print(results$optimal_map)
 ```
 
-### Interactive Dashboard
+### Hotspot Analysis
 
 ```r
-# Launch interactive dashboard
-sero_interactive(data)
+# Analyze accident hotspots
+hotspots <- sero_hotspots(
+  accidents = data$accident,
+  risk_categories = c(1, 2),  # Fatal and serious accidents
+  buffer = 800,               # 800 meter buffer
+  min_events = 3              # Minimum 3 accidents per hotspot
+)
+
+# Visualize hotspots
+hotspot_map <- plot(hotspots, data = data, show_munster = TRUE)
+print(hotspot_map)
+
+# Print summary
+print(hotspots)
+```
+
+### Kernel Density Analysis
+
+```r
+# Generate kernel density heatmap
+heatmap <- sero_heatmap(
+  accidents = data$accident,
+  risk_categories = c(1, 2),
+  bandwidth = 800,
+  grid_size = 50,
+  data = data,
+  clip_to_munster = TRUE,
+  color_scheme = "viridis"
+)
+
+# Display heatmap
+print(heatmap)
+
+# Compare risk categories
+comparison <- sero_heatmap_compare(
+  accidents = data$accident,
+  categories = list(
+    "Fatal" = 1,
+    "Serious" = 2,
+    "All High-Risk" = c(1, 2)
+  ),
+  data = data
+)
+print(comparison)
+```
+
+### Optimal Location Finding
+
+```r
+# Find optimal emergency service locations
+optimal_locations <- sero_find_optimal_locations(
+  data = data,
+  num_locations = 6,
+  method = "fast",
+  risk_categories = c(1, 2),
+  quick = TRUE
+)
+
+# Visualize optimal locations
+optimal_map <- sero_plot_optimal_quick(
+  optimal_locations = optimal_locations,
+  districts = data$districts,
+  accidents = data$accident
+)
+print(optimal_map)
+
+# Print performance metrics
+print(optimal_locations)
+```
+
+### Route Optimization
+
+```r
+# Calculate routes from optimal locations to accident sites
+high_risk_accidents <- data$accident[data$accident$UKATEGORIE %in% c(1, 2), ]
+sample_accidents <- high_risk_accidents[1:8, ]
+
+routes <- sero_routes(
+  optimal_locations = optimal_locations,
+  accidents = sample_accidents,
+  max_routes = 8,
+  data = data
+)
+
+# Visualize routes
+route_map <- plot(routes, data = data, show_munster = TRUE)
+print(route_map)
+
+# Print route summary
+print(routes)
 ```
 
 ## Documentation
@@ -184,19 +248,29 @@ For more detailed documentation, use:
 help(package = "SERO")
 
 # Get help for specific functions
-?sero_analyze
-?sero_interactive
-?identify_hotspots
+?sero_hotspots
+?sero_heatmap
+?sero_find_optimal_locations
+?sero_routes
+?sero_emergency_workflow
 ```
 
 ## Data Format
 
-SERO works with spatial data in various formats:
+SERO works with spatial data in Simple Features format:
 
-- **Shapefiles** (.shp)
-- **GeoJSON** (.geojson)
-- **GeoPackage** (.gpkg)
-- **Spatial data frames** (sf objects)
+- **Built-in Dataset**: Münster emergency response data (accidents, districts, roads, landuse)
+- **Input Format**: sf objects (Simple Features for R)
+- **Coordinate Systems**: Automatic CRS handling and transformation
+- **Data Validation**: Built-in validation functions
+
+## Comprehensive Examples
+
+The package includes comprehensive demonstration files:
+
+- `inst/examples/SERO_comprehensive_demo.Rmd` - Professional RMarkdown report
+- `inst/examples/SERO_demo.R` - Complete R script demonstration
+- `inst/examples/README.md` - Detailed usage instructions
 
 ## Contributing
 
@@ -212,6 +286,7 @@ For questions, issues, or support:
 
 - Create an issue on [GitHub](https://github.com/iprincegh/SERO/issues)
 - Contact the maintainer
+- Check the comprehensive examples in `inst/examples/`
 
 ## Citation
 
@@ -219,10 +294,10 @@ If you use SERO in your research, please cite:
 
 ```
 SERO: Spatial Emergency Response Optimization
-R Package Version 1.0.0
+R Package Version 0.1.0
 https://github.com/iprincegh/SERO
 ```
 
 ---
 
-*Developed with ❤️ for the spatial analysis community*
+*Developed for spatial emergency response optimization and analysis*
