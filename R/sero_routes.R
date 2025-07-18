@@ -222,11 +222,21 @@ calculate_straight_routes <- function(service_locations, accidents, max_routes) 
 #' Plot method for sero_routes using ggplot2
 #'
 #' @param x sero_routes object
+#' @param data Optional data object containing spatial layers for basemap
+#' @param basemap Character, basemap type: "districts", "roads", "landuse", "all", or "none" (default: "districts")
+#' @param show_network Logical, whether to show road network (default: TRUE)
+#' @param show_landuse Logical, whether to show land use (default: FALSE)
+#' @param route_width Numeric, width of route lines (default: 1.2)
+#' @param alpha_routes Numeric, transparency of route lines (default: 0.8)
+#' @param alpha_basemap Numeric, transparency of basemap (default: 0.3)
 #' @param ... additional arguments (unused)
 #' @return ggplot2 object
 #' @export
 #' @importFrom rlang .data
-plot.sero_routes <- function(x, ...) {
+plot.sero_routes <- function(x, data = NULL, basemap = "districts", 
+                           show_network = TRUE, show_landuse = FALSE,
+                           route_width = 1.2, alpha_routes = 0.8, 
+                           alpha_basemap = 0.3, ...) {
   if (nrow(x$routes) == 0) {
     return(ggplot2::ggplot() + 
            ggplot2::geom_text(ggplot2::aes(x = 0, y = 0, label = "No routes found"), 
@@ -239,30 +249,90 @@ plot.sero_routes <- function(x, ...) {
   locations_wgs84 <- sf::st_transform(x$service_locations, 4326)
   accidents_wgs84 <- sf::st_transform(x$accidents, 4326)
   
+  # Load data if not provided
+  if (is.null(data)) {
+    tryCatch({
+      data <- sero_load_data()
+    }, error = function(e) {
+      warning("Could not load data for basemap: ", e$message)
+      data <- NULL
+    })
+  }
+  
   # Create base plot
-  p <- ggplot2::ggplot() +
-    # Add routes as lines
-    ggplot2::geom_sf(data = routes_wgs84,
-                    ggplot2::aes(color = .data$estimated_time),
-                    size = 1.2, alpha = 0.7) +
-    # Add service locations
-    ggplot2::geom_sf(data = locations_wgs84,
-                    color = "blue", fill = "lightblue",
-                    shape = 21, size = 4, alpha = 0.8) +
-    # Add accident locations
-    ggplot2::geom_sf(data = accidents_wgs84[seq_len(nrow(routes_wgs84)), ],
-                    color = "red", size = 2, alpha = 0.8) +
-    # Color scale for travel time
-    ggplot2::scale_color_viridis_c(name = "Travel Time\n(minutes)", 
-                                  option = "plasma", trans = "sqrt") +
-    # Styling
-    ggplot2::theme_minimal() +
+  p <- ggplot2::ggplot()
+  
+  # Add basemap layers based on selection
+  if (!is.null(data)) {
+    # Add districts basemap
+    if (basemap %in% c("districts", "all") && "districts" %in% names(data)) {
+      districts_wgs84 <- sf::st_transform(data$districts, 4326)
+      p <- p + ggplot2::geom_sf(data = districts_wgs84,
+                               fill = "lightgray",
+                               color = "darkgray",
+                               alpha = alpha_basemap,
+                               size = 0.8)
+    }
+    
+    # Add landuse basemap
+    if ((basemap %in% c("landuse", "all") || show_landuse) && "landuse" %in% names(data)) {
+      landuse_wgs84 <- sf::st_transform(data$landuse, 4326)
+      # Sample landuse for performance
+      if (nrow(landuse_wgs84) > 2000) {
+        landuse_wgs84 <- landuse_wgs84[sample(nrow(landuse_wgs84), 2000), ]
+      }
+      p <- p + ggplot2::geom_sf(data = landuse_wgs84,
+                               ggplot2::aes(fill = .data$fclass),
+                               color = "white",
+                               alpha = alpha_basemap * 0.5,
+                               size = 0.1) +
+        ggplot2::scale_fill_viridis_d(name = "Land Use", 
+                                     option = "viridis", 
+                                     alpha = 0.7)
+    }
+    
+    # Add road network
+    if ((basemap %in% c("roads", "all") || show_network) && "roads" %in% names(data)) {
+      roads_wgs84 <- sf::st_transform(data$roads, 4326)
+      # Sample roads for performance
+      if (nrow(roads_wgs84) > 5000) {
+        roads_wgs84 <- roads_wgs84[sample(nrow(roads_wgs84), 5000), ]
+      }
+      p <- p + ggplot2::geom_sf(data = roads_wgs84,
+                               color = "gray60",
+                               alpha = alpha_basemap * 0.8,
+                               size = 0.3)
+    }
+  }
+  
+  # Add routes as lines
+  p <- p + ggplot2::geom_sf(data = routes_wgs84,
+                           ggplot2::aes(color = .data$estimated_time),
+                           size = route_width, alpha = alpha_routes)
+  
+  # Add service locations (red plus sign for ambulance/emergency services)
+  p <- p + ggplot2::geom_sf(data = locations_wgs84,
+                           color = "red", fill = "red",
+                           shape = 3, size = 6, alpha = 0.9, stroke = 2)
+  
+  # Add accident locations
+  p <- p + ggplot2::geom_sf(data = accidents_wgs84[seq_len(nrow(routes_wgs84)), ],
+                           color = "red", size = 2, alpha = 0.9)
+  
+  # Color scale for travel time
+  p <- p + ggplot2::scale_color_viridis_c(name = "Travel Time\n(minutes)", 
+                                         option = "plasma", trans = "sqrt")
+  
+  # Styling
+  p <- p + ggplot2::theme_void() +
     ggplot2::labs(title = "Emergency Response Routes",
-                 subtitle = paste("Showing", x$summary$total_routes, "fastest routes"),
-                 x = "Longitude", y = "Latitude") +
+                 subtitle = paste("Showing", x$summary$total_routes, "fastest routes |", 
+                                 "Basemap:", basemap)) +
     ggplot2::theme(
       legend.position = "bottom",
-      axis.text = ggplot2::element_text(size = 8)
+      plot.title = ggplot2::element_text(size = 14, face = "bold", hjust = 0.5),
+      plot.subtitle = ggplot2::element_text(size = 12, hjust = 0.5),
+      legend.box = "horizontal"
     )
   
   return(p)
@@ -366,6 +436,7 @@ calculate_road_routes <- function(service_locations, accidents, max_routes, data
   
   # Create route geometries 
   # In a full implementation, this would trace the actual road path
+  # For now, create straight line (placeholder for actual road routing)
   route_geometries <- list()
   for (i in seq_len(nrow(routes_data))) {
     service_idx <- routes_data$service_location_id[i]
@@ -491,9 +562,244 @@ sero_load_locations <- function(filename) {
   })
 }
 
-# Interactive routing functions removed - package simplified
-# SERO now focuses on core functionality:
-# - Routing to optimal locations using existing accident data
-# - No user input or interactive features
+#' Create comprehensive route visualizations with different basemaps
+#'
+#' @param routes sero_routes object
+#' @param data Data object containing spatial layers
+#' @param save_plots Logical, whether to save plots to files (default: TRUE)
+#' @param output_dir Character, directory to save plots (default: current directory)
+#' @param width Numeric, plot width in inches (default: 12)
+#' @param height Numeric, plot height in inches (default: 8)
+#' @return List of ggplot2 objects
+#' @export
+sero_routes_comprehensive <- function(routes, data = NULL, save_plots = TRUE, 
+                                    output_dir = ".", width = 12, height = 8) {
   
+  if (is.null(data)) {
+    data <- sero_load_data()
+  }
+  
+  # Create different route visualizations
+  plots <- list()
+  
+  # 1. Routes with Districts basemap
+  cat("Creating routes with districts basemap...\n")
+  plots$districts <- plot(routes, data = data, basemap = "districts", 
+                         show_network = FALSE, show_landuse = FALSE)
+  
+  # 2. Routes with Road Network
+  cat("Creating routes with road network...\n")
+  plots$roads <- plot(routes, data = data, basemap = "roads",
+                     show_network = TRUE, show_landuse = FALSE)
+  
+  # 3. Routes with Land Use
+  cat("Creating routes with land use...\n")
+  plots$landuse <- plot(routes, data = data, basemap = "landuse",
+                       show_network = FALSE, show_landuse = TRUE)
+  
+  # 4. Routes with All Basemaps (Union)
+  cat("Creating comprehensive route view with all basemaps...\n")
+  plots$comprehensive <- plot(routes, data = data, basemap = "all",
+                             show_network = TRUE, show_landuse = TRUE,
+                             alpha_basemap = 0.2)
+  
+  # 5. Routes only (no basemap)
+  cat("Creating routes without basemap...\n")
+  plots$routes_only <- plot(routes, data = data, basemap = "none")
+  
+  # Create comparative panel
+  cat("Creating comparative panel...\n")
+  plots$comparative <- create_route_comparison_panel(routes, data)
+  
+  # Save plots if requested
+  if (save_plots) {
+    cat("Saving plots to", output_dir, "...\n")
+    
+    plot_names <- c("districts", "roads", "landuse", "comprehensive", 
+                   "routes_only", "comparative")
+    
+    for (i in seq_along(plot_names)) {
+      filename <- file.path(output_dir, paste0("routes_", plot_names[i], ".png"))
+      ggplot2::ggsave(filename, plots[[i]], width = width, height = height, 
+                     dpi = 300, bg = "white")
+      cat("Saved:", filename, "\n")
+    }
+  }
+  
+  return(plots)
+}
+
+#' Create a comparative panel of route visualizations
+#'
+#' @param routes sero_routes object
+#' @param data Data object containing spatial layers
+#' @return ggplot2 object with multiple panels
+create_route_comparison_panel <- function(routes, data) {
+  
+  # Create individual plots for the panel
+  p1 <- plot(routes, data = data, basemap = "districts", 
+            show_network = FALSE, show_landuse = FALSE) +
+    ggplot2::labs(title = "Districts Basemap", subtitle = NULL) +
+    ggplot2::theme(legend.position = "none")
+  
+  p2 <- plot(routes, data = data, basemap = "roads",
+            show_network = TRUE, show_landuse = FALSE) +
+    ggplot2::labs(title = "Road Network", subtitle = NULL) +
+    ggplot2::theme(legend.position = "none")
+  
+  p3 <- plot(routes, data = data, basemap = "landuse",
+            show_network = FALSE, show_landuse = TRUE) +
+    ggplot2::labs(title = "Land Use", subtitle = NULL) +
+    ggplot2::theme(legend.position = "none")
+  
+  p4 <- plot(routes, data = data, basemap = "all",
+            show_network = TRUE, show_landuse = TRUE,
+            alpha_basemap = 0.2) +
+    ggplot2::labs(title = "Comprehensive View", subtitle = NULL) +
+    ggplot2::theme(legend.position = "bottom")
+  
+  # Combine into a 2x2 grid
+  if (requireNamespace("gridExtra", quietly = TRUE)) {
+    combined_plot <- gridExtra::grid.arrange(p1, p2, p3, p4, ncol = 2,
+                                           top = "Emergency Response Routes: Comparative Analysis")
+    return(combined_plot)
+  } else {
+    warning("gridExtra package required for comparative panel. Install with: install.packages('gridExtra')")
+    return(p4)  # Return comprehensive view as fallback
+  }
+}
+
+#' Enhanced route analysis with spatial context
+#'
+#' @param routes sero_routes object
+#' @param data Data object containing spatial layers
+#' @param analysis_type Character, type of analysis: "performance", "coverage", "accessibility"
+#' @return List with analysis results and visualizations
+#' @export
+sero_routes_analysis <- function(routes, data = NULL, analysis_type = "performance") {
+  
+  if (is.null(data)) {
+    data <- sero_load_data()
+  }
+  
+  if (nrow(routes$routes) == 0) {
+    warning("No routes to analyze")
+    return(list(analysis = NULL, plot = NULL))
+  }
+  
+  # Transform data for analysis
+  locations_utm <- sf::st_transform(routes$service_locations, 32632)
+  
+  analysis_results <- list()
+  
+  if (analysis_type == "performance") {
+    # Performance analysis
+    analysis_results$summary <- list(
+      total_routes = nrow(routes$routes),
+      avg_distance = mean(routes$routes$distance),
+      avg_time = mean(routes$routes$estimated_time),
+      max_distance = max(routes$routes$distance),
+      max_time = max(routes$routes$estimated_time),
+      min_distance = min(routes$routes$distance),
+      min_time = min(routes$routes$estimated_time),
+      efficiency_score = mean(routes$routes$distance) / max(routes$routes$distance)
+    )
+    
+    # Create performance visualization
+    analysis_results$plot <- create_performance_plot(routes, data)
+    
+  } else if (analysis_type == "coverage") {
+    # Coverage analysis
+    service_buffers <- sf::st_buffer(locations_utm, 5000)  # 5km coverage
+    total_coverage <- sf::st_union(service_buffers)
+    
+    analysis_results$summary <- list(
+      coverage_area_sqkm = as.numeric(sf::st_area(total_coverage)) / 1e6,
+      service_locations = nrow(locations_utm),
+      avg_coverage_radius = 5000  # meters
+    )
+    
+    # Create coverage visualization
+    analysis_results$plot <- create_coverage_plot(routes, data, service_buffers)
+    
+  } else if (analysis_type == "accessibility") {
+    # Accessibility analysis
+    analysis_results$summary <- list(
+      routes_under_5min = sum(routes$routes$estimated_time < 5),
+      routes_5_10min = sum(routes$routes$estimated_time >= 5 & routes$routes$estimated_time < 10),
+      routes_over_10min = sum(routes$routes$estimated_time >= 10),
+      accessibility_score = sum(routes$routes$estimated_time < 5) / nrow(routes$routes)
+    )
+    
+    # Create accessibility visualization
+    analysis_results$plot <- create_accessibility_plot(routes, data)
+  }
+  
+  return(analysis_results)
+}
+
+#' Create performance visualization
+#' @param routes sero_routes object
+#' @param data Data object
+#' @return ggplot2 object
+create_performance_plot <- function(routes, data) {
+  plot(routes, data = data, basemap = "districts") +
+    ggplot2::labs(title = "Route Performance Analysis",
+                 subtitle = paste("Avg time:", round(mean(routes$routes$estimated_time), 1), 
+                                "min | Avg distance:", round(mean(routes$routes$distance)), "m"))
+}
+
+#' Create coverage visualization
+#' @param routes sero_routes object
+#' @param data Data object
+#' @param service_buffers sf object with service coverage areas
+#' @return ggplot2 object
+create_coverage_plot <- function(routes, data, service_buffers) {
+  # Transform for plotting
+  buffers_wgs84 <- sf::st_transform(service_buffers, 4326)
+  
+  plot(routes, data = data, basemap = "districts") +
+    ggplot2::geom_sf(data = buffers_wgs84, fill = "blue", alpha = 0.1, color = "blue") +
+    ggplot2::labs(title = "Service Coverage Analysis",
+                 subtitle = "Blue areas show 5km service coverage zones")
+}
+
+#' Create accessibility visualization
+#' @param routes sero_routes object
+#' @param data Data object
+#' @return ggplot2 object
+create_accessibility_plot <- function(routes, data) {
+  # Color routes by time categories
+  routes_wgs84 <- sf::st_transform(routes$routes, 4326)
+  routes_wgs84$time_category <- cut(routes_wgs84$estimated_time,
+                                   breaks = c(0, 5, 10, Inf),
+                                   labels = c("< 5 min", "5-10 min", "> 10 min"))
+  
+  locations_wgs84 <- sf::st_transform(routes$service_locations, 4326)
+  accidents_wgs84 <- sf::st_transform(routes$accidents, 4326)
+  
+  # Add basemap
+  p <- ggplot2::ggplot()
+  if ("districts" %in% names(data)) {
+    districts_wgs84 <- sf::st_transform(data$districts, 4326)
+    p <- p + ggplot2::geom_sf(data = districts_wgs84, fill = "lightgray", 
+                             color = "darkgray", alpha = 0.3)
+  }
+  
+  p <- p + 
+    ggplot2::geom_sf(data = routes_wgs84, 
+                    ggplot2::aes(color = .data$time_category), 
+                    size = 1.5, alpha = 0.8) +
+    ggplot2::geom_sf(data = locations_wgs84, color = "red", size = 6, shape = 3, stroke = 2) +
+    ggplot2::geom_sf(data = accidents_wgs84, color = "red", size = 2) +
+    ggplot2::scale_color_manual(values = c("green", "orange", "red"),
+                               name = "Response Time") +
+    ggplot2::theme_void() +
+    ggplot2::labs(title = "Emergency Response Accessibility",
+                 subtitle = "Routes colored by response time categories") +
+    ggplot2::theme(legend.position = "bottom")
+  
+  return(p)
+}
+
 

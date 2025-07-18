@@ -4,7 +4,14 @@
 \alias{sero_load_data}
 \title{Load SERO spatial data}
 \usage{
-sero_load_data()
+sero_load_data(layers = NULL, quiet = FALSE, validate = TRUE)
+}
+\arguments{
+\item{layers}{character vector, specific layers to load (default: all)}
+
+\item{quiet}{logical, suppress loading messages (default: FALSE)}
+
+\item{validate}{logical, validate data structure (default: TRUE)}
 }
 \value{
 list containing spatial data layers:
@@ -20,10 +27,17 @@ list containing spatial data layers:
 Load the built-in Munster dataset containing accident, road, landuse,
 population, and district data for emergency response analysis.
 }
+\details{
+Data is returned as a list of sf objects, optimized for spatial analysis.
+All layers are validated and standardized for consistent CRS and geometry.
+}
 \examples{
 \dontrun{
-# Load the dataset
+# Load the complete dataset
 data <- sero_load_data()
+
+# Load only specific layers
+data <- sero_load_data(layers = c("accident", "districts"))
 
 # Explore the data structure
 str(data)

@@ -228,13 +228,14 @@ sero_plot_optimal_quick <- function(optimal_locations,
                     alpha = 0.3) +
     ggplot2::geom_sf(data = optimal_wgs84, 
                     color = "red", 
-                    size = 4, 
-                    shape = 17) +
+                    size = 6, 
+                    shape = 3, 
+                    stroke = 2) +
     ggplot2::theme_minimal() +
     ggplot2::labs(
       title = "Optimal Emergency Service Locations",
       subtitle = paste("Found", nrow(optimal_wgs84), "strategic locations"),
-      caption = "Red triangles = Emergency bases"
+      caption = "Red plus signs = Emergency ambulance stations"
     )
   
   # Add accidents if provided
@@ -468,8 +469,19 @@ sero_emergency_workflow <- function(interactive = FALSE, quick = TRUE, num_locat
     ...
   )
   
-  # Step 4: Visualize optimal locations
-  cat("\nStep 4: Creating optimal location visualization...\n")
+  # Step 4: Calculate routes to optimal locations
+  cat("\nStep 4: Calculating routes to accident scenes...\n")
+  routes <- sero_routes(
+    locations = optimal_locations,
+    accidents = data$accident,
+    max_routes = 5,
+    risk_categories = risk_categories,
+    data = data
+  )
+  cat("Routes calculated\n")
+  
+  # Step 5: Visualize optimal locations and routes
+  cat("\nStep 5: Creating visualizations...\n")
   optimal_map <- sero_plot_optimal_quick(
     optimal_locations = optimal_locations,
     districts = data$districts,
@@ -477,8 +489,12 @@ sero_emergency_workflow <- function(interactive = FALSE, quick = TRUE, num_locat
   )
   cat("Optimal location map created\n")
   
-  # Step 5: Performance summary
-  cat("\nStep 5: Performance Summary\n")
+  # Create route visualization
+  route_map <- plot(routes)
+  cat("Route map created\n")
+  
+  # Step 6: Performance summary
+  cat("\nStep 6: Performance Summary\n")
   cat("============================\n")
   cat("Emergency bases found:", nrow(optimal_locations), "\n")
   if ("accessibility_score" %in% names(optimal_locations)) {
@@ -490,22 +506,35 @@ sero_emergency_workflow <- function(interactive = FALSE, quick = TRUE, num_locat
     cat("Maximum accidents covered (500m):", base::max(optimal_locations$accident_count_500m), "\n")
   }
   
+  # Route performance summary
+  if (nrow(routes$routes) > 0) {
+    cat("Routes calculated:", nrow(routes$routes), "\n")
+    cat("Average response time:", round(mean(routes$routes$estimated_time), 1), "minutes\n")
+    cat("Maximum response time:", round(max(routes$routes$estimated_time), 1), "minutes\n")
+  }
+  
   # Display maps
   print(accident_map)
   print(optimal_map)
+  print(route_map)
   
   # Package simplified - interactive features removed
   # Returning results without interactive mode
   results <- list(
     data = data,
     optimal_locations = optimal_locations,
+    routes = routes,
     accident_map = accident_map,
     optimal_map = optimal_map,
+    route_map = route_map,
     summary = list(
       num_locations = nrow(optimal_locations),
       avg_accessibility = ifelse("accessibility_score" %in% names(optimal_locations),
                                 mean(optimal_locations$accessibility_score), NA),
-      total_accidents = nrow(data$accident)
+      total_accidents = nrow(data$accident),
+      num_routes = nrow(routes$routes),
+      avg_response_time = ifelse(nrow(routes$routes) > 0, 
+                                mean(routes$routes$estimated_time), NA)
     )
   )
   

@@ -137,6 +137,12 @@ sero_heatmap <- function(accidents,
     stop(paste("No accidents found for risk categories:", paste(risk_categories, collapse=", ")))
   }
   
+  # Warning for small sample sizes
+  if (nrow(high_risk_accidents) < 10) {
+    warning(paste("Very few accidents found for risk categories:", paste(risk_categories, collapse=", "), 
+                  "- only", nrow(high_risk_accidents), "accidents. Consider using broader categories or adjusting bandwidth."))
+  }
+  
   # Ensure projected CRS for accurate distance calculations
   if (sf::st_is_longlat(high_risk_accidents)) {
     high_risk_accidents <- sf::st_transform(high_risk_accidents, 32632)
@@ -206,10 +212,17 @@ sero_heatmap <- function(accidents,
   }
   
   density_grid$density <- density_values
-  density_grid <- density_grid[density_grid$density > 0.01, ]
+  
+  # Adaptive threshold based on sample size
+  min_density_threshold <- if (nrow(high_risk_accidents) < 50) 0.001 else 0.01
+  density_grid <- density_grid[density_grid$density > min_density_threshold, ]
   
   if (nrow(density_grid) == 0) {
-    stop("No density surface generated for selected parameters.")
+    warning("No density surface generated for selected parameters. Try reducing bandwidth or grid_size.")
+    return(ggplot2::ggplot() + 
+           ggplot2::geom_text(ggplot2::aes(x = 0, y = 0, label = "No density surface generated"), 
+                             size = 5) +
+           ggplot2::theme_void())
   }
   
   # Convert to sf and clip to Munster if requested
@@ -303,17 +316,19 @@ sero_heatmap <- function(accidents,
     })
   }
   
-  # Add heatmap with customizable transparency
+  # Add heatmap with appropriate point size based on data density
+  point_size <- if (nrow(density_df) > 1000) 1.0 else if (nrow(density_df) > 100) 1.5 else 2.0
   p <- p + ggplot2::geom_point(data = density_df,
                               ggplot2::aes(x = .data$x, y = .data$y, color = .data$density),
-                              size = 1.5, alpha = alpha_heatmap)
+                              size = point_size, alpha = alpha_heatmap)
   
   # Add individual accident points if requested
   if (show_accidents) {
+    accident_size <- if (nrow(accidents_wgs84) > 1000) 0.5 else if (nrow(accidents_wgs84) > 100) 0.8 else 1.2
     p <- p + ggplot2::geom_sf(data = accidents_wgs84,
                              ggplot2::aes(shape = factor(.data$UKATEGORIE)),
                              color = "black", 
-                             size = 0.8, 
+                             size = accident_size, 
                              alpha = 0.7)
   }
   
