@@ -10,17 +10,15 @@ Description: Spatial emergency response optimization for accident analysis in Mu
     Identifies accident hotspots using robust point pattern analysis, computes optimal emergency service locations with multi-criteria analysis, and visualizes accident density and hotspots. All analysis uses built-in data from the inst/gpkg folder. The codebase is now streamlined and focused on core spatial workflows, with obsolete and empty files removed for clarity and maintainability.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Imports:
-    sf (>= 1.0.0),
-    ggplot2 (>= 3.0.0),
-    spatstat.geom (>= 3.0.0),
-    spatstat.explore (>= 3.0.0),
-    rlang (>= 0.4.0),
-    utils,
+Imports: 
+    sf,
+    ggplot2,
+    grid,
     RColorBrewer,
     magrittr,
-    htmlwidgets,
-    stats
+    stats,
+    stars (>= 0.6.0),
+    rlang
 Suggests:
     testthat (>= 3.0.0),
     knitr,
@@ -31,7 +29,13 @@ Suggests:
     RSQLite,
     plotly,
     openxlsx,
-    ggspatial
+    ggspatial,
+    dplyr,
+    htmlwidgets,
+    gridExtra,
+    viridis,
+    spatstat.explore,
+    spatstat.geom
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2

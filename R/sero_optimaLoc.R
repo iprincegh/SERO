@@ -362,6 +362,53 @@ sero_plot_accidents <- function(accidents,
   return(p)
 }
 
+#' Save Optimal Locations to Database
+#'
+#' Saves optimal emergency service locations to a database or GeoPackage file.
+#'
+#' @param locations sf object containing optimal locations
+#' @param db_path character, path to database file
+#' @return NULL (saves to file)
+#' @export
+#' @examples
+#' \dontrun{
+#' optimal_locs <- sero_find_optimal_locations(accident_data)
+#' sero_save_optimal_locations(optimal_locs, "optimal_locations.gpkg")
+#' }
+sero_save_optimal_locations <- function(locations, db_path) {
+  # Input validation
+  if (!inherits(locations, "sf")) {
+    stop("locations must be an sf object")
+  }
+  
+  if (missing(db_path) || is.null(db_path)) {
+    stop("db_path must be provided")
+  }
+  
+  # Create directory if it doesn't exist
+  dir.create(dirname(db_path), recursive = TRUE, showWarnings = FALSE)
+  
+  # Determine file format and save
+  if (grepl("\\.gpkg$", db_path, ignore.case = TRUE)) {
+    # Save as GeoPackage
+    sf::st_write(locations, db_path, layer = "optimal_locations", 
+                 append = FALSE, quiet = TRUE)
+  } else if (grepl("\\.sqlite$", db_path, ignore.case = TRUE)) {
+    # Save as SQLite with spatial extension
+    sf::st_write(locations, db_path, layer = "optimal_locations", 
+                 append = FALSE, quiet = TRUE)
+  } else if (grepl("\\.shp$", db_path, ignore.case = TRUE)) {
+    # Save as Shapefile
+    sf::st_write(locations, db_path, append = FALSE, quiet = TRUE)
+  } else {
+    # Default to GeoPackage
+    sf::st_write(locations, db_path, layer = "optimal_locations", 
+                 append = FALSE, quiet = TRUE)
+  }
+  
+  invisible(NULL)
+}
+
 #' Enhanced workflow function for users
 #'
 #' @param interactive logical whether to launch interactive mode
