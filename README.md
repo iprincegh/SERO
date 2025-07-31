@@ -1,7 +1,6 @@
 # SERO: Spatial Emergency Response Optimization
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/iprincegh/SERO/workflows/R-CMD-check/badge.svg)](https://github.com/iprincegh/SERO/actions)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 <!-- badges: end -->
 
