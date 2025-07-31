@@ -17,7 +17,6 @@ Imports:
     RColorBrewer,
     magrittr,
     stats,
-    stars (>= 0.6.0),
     rlang
 Suggests:
     testthat (>= 3.0.0),
