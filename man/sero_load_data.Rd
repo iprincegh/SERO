@@ -4,14 +4,18 @@
 \alias{sero_load_data}
 \title{Load SERO spatial data}
 \usage{
-sero_load_data(layers = NULL, quiet = FALSE, validate = TRUE)
+sero_load_data(layers = NULL, crs = 25832, quiet = FALSE, validate = TRUE, optimize_for = "distance")
 }
 \arguments{
 \item{layers}{character vector, specific layers to load (default: all)}
 
+\item{crs}{numeric, coordinate reference system EPSG code (default: 25832)}
+
 \item{quiet}{logical, suppress loading messages (default: FALSE)}
 
 \item{validate}{logical, validate data structure (default: TRUE)}
+
+\item{optimize_for}{character, optimization method ("distance" or "time")}
 }
 \value{
 list containing spatial data layers:

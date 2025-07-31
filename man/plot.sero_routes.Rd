@@ -4,10 +4,27 @@
 \alias{plot.sero_routes}
 \title{Plot method for sero_routes using ggplot2}
 \usage{
-\method{plot}{sero_routes}(x, ...)
+\method{plot}{sero_routes}(x, data = NULL, basemap = "districts", 
+                           show_network = TRUE, show_landuse = FALSE,
+                           route_width = 1.2, alpha_routes = 0.8, 
+                           alpha_basemap = 0.3, ...)
 }
 \arguments{
 \item{x}{sero_routes object}
+
+\item{data}{spatial data object for basemap context}
+
+\item{basemap}{type of basemap to display ("districts", "landuse", etc.)}
+
+\item{show_network}{logical, whether to show road network}
+
+\item{show_landuse}{logical, whether to show land use patterns}
+
+\item{route_width}{width of route lines}
+
+\item{alpha_routes}{transparency of route lines}
+
+\item{alpha_basemap}{transparency of basemap elements}
 
 \item{...}{additional arguments (unused)}
 }

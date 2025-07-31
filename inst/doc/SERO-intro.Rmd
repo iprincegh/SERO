@@ -1,0 +1,648 @@
+---
+title: "Spatial Emergency Response Optimization: A Data-Driven Approach to Emergency Service Location Planning"
+author: "SERO Development Team"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Spatial Emergency Response Optimization: A Data-Driven Approach to Emergency Service Location Planning}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 8,
+  fig.height = 6,
+  fig.align = "center"
+)
+```
+
+# Introduction and Motivation
+
+Emergency response systems face critical challenges in optimally positioning emergency services to minimize response times and maximize coverage. The spatial distribution of accidents exhibits distinct patterns that can inform strategic placement of emergency stations. This analysis demonstrates how spatial statistical methods can identify high-risk areas and optimize emergency service locations using real traffic accident data from Münster, Germany.
+
+The motivation for this work stems from the need to transition from intuition-based to data-driven emergency service planning. Traditional approaches often rely on administrative boundaries or population density alone, potentially missing critical accident concentration areas that emerge from complex urban dynamics. By applying kernel density estimation and spatial optimization algorithms, we can reveal hidden patterns and provide evidence-based recommendations for emergency service deployment.
+
+## Optimal Location Calculation Logic
+
+The optimal emergency service locations are calculated using a sophisticated spatial optimization algorithm that follows these key principles:
+
+1. **Distance-Based Accessibility**: The algorithm calculates accessibility scores based on Euclidean distances from potential emergency station locations to all high-risk accident sites (severity categories 1 and 2 - fatal and serious accidents).
+
+2. **Weighted Risk Categories**: Fatal accidents (category 1) receive higher priority weights than serious accidents (category 2) in the optimization function, ensuring that the most critical incidents have the shortest response distances.
+
+3. **Coverage Optimization**: The algorithm seeks to minimize the average distance from emergency stations to accident locations while ensuring that no accident location is beyond a reasonable response distance.
+
+4. **Iterative Placement**: Starting with candidate locations distributed across the study area, the algorithm iteratively adjusts station positions to minimize the overall accessibility score (lower scores indicate better coverage).
+
+5. **Spatial Constraints**: The optimization considers geographical constraints such as road networks, land use patterns, and administrative boundaries to ensure that proposed locations are practically feasible.
+
+The accessibility score represents the average weighted distance from all emergency stations to accident locations, where lower scores indicate more efficient coverage. This approach ensures that emergency services are positioned to provide the fastest possible response to the most critical incidents while maintaining reasonable coverage for all accident types.
+
+# Data Description and Exploration
+
+The analysis utilizes a comprehensive spatial dataset from Münster containing traffic accidents, administrative boundaries, road networks, land use patterns, and population distributions. This dataset provides the foundation for understanding spatial accident patterns and optimizing emergency response strategies.
+
+```{r data-loading}
+library(SERO)
+library(ggplot2)
+library(gridExtra)
+library(grid)
+library(dplyr)
+
+# Load comprehensive spatial dataset
+data <- sero_load_data()
+
+# Dataset summary
+data_summary <- data.frame(
+  Layer = names(data),
+  Features = sapply(data, nrow),
+  Type = c("Point", "Polygon", "LineString", "Polygon", "Polygon")
+)
+
+print(data_summary)
+```
+
+```{r accident-severity-analysis}
+# Analyze accident severity distribution
+severity_counts <- table(data$accident$UKATEGORIE)
+severity_df <- data.frame(
+  Category = c("Fatal", "Serious", "Light"),
+  Count = as.numeric(severity_counts[1:3]),
+  Percentage = round(as.numeric(severity_counts[1:3]) / sum(severity_counts) * 100, 1)
+)
+
+# Enhanced severity visualization with multiple perspectives
+p1 <- ggplot(severity_df, aes(x = Category, y = Count, fill = Category)) +
+  geom_col(alpha = 0.8) +
+  geom_text(aes(label = paste0(Count, "\n(", Percentage, "%)")), 
+            vjust = 1.5, color = "white", fontface = "bold", size = 4) +
+  scale_fill_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
+  labs(title = "Accident Count by Severity", 
+       subtitle = "Absolute numbers and percentages",
+       x = "Accident Severity", y = "Number of Incidents") +
+  theme_minimal() +
+  theme(legend.position = "none", plot.title = element_text(size = 12, face = "bold"))
+
+p2 <- ggplot(severity_df, aes(x = "", y = Count, fill = Category)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  scale_fill_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
+  labs(title = "Severity Distribution", subtitle = "Proportional view", fill = "Category") +
+  theme_void() +
+  theme(plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 10, hjust = 0.5),
+        legend.position = "bottom")
+
+p3 <- ggplot(severity_df, aes(x = reorder(Category, -Count), y = Percentage, fill = Category)) +
+  geom_col(alpha = 0.8) +
+  geom_text(aes(label = paste0(Percentage, "%")), vjust = -0.5, fontface = "bold") +
+  scale_fill_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
+  labs(title = "Percentage Distribution", 
+       subtitle = "Risk category proportions",
+       x = "Accident Severity", y = "Percentage (%)") +
+  theme_minimal() +
+  theme(legend.position = "none", plot.title = element_text(size = 12, face = "bold"))
+
+p4 <- ggplot(severity_df, aes(x = Category, y = Count)) +
+  geom_segment(aes(xend = Category, yend = 0, color = Category), size = 8, alpha = 0.7) +
+  geom_point(aes(color = Category), size = 4) +
+  scale_color_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
+  labs(title = "Emergency Response Priority", 
+       subtitle = "Critical incidents requiring immediate attention",
+       x = "Accident Severity", y = "Number of Incidents") +
+  theme_minimal() +
+  theme(legend.position = "none", plot.title = element_text(size = 12, face = "bold"))
+
+# Create 2x2 grid for comprehensive severity analysis
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+
+# Summary statistics
+summary(severity_df)
+```
+
+# Spatial Pattern Analysis
+
+## Hotspot Detection
+
+We identify accident concentration areas using kernel density estimation to reveal spatial clustering patterns invisible to traditional analysis methods.
+
+```{r hotspot-analysis}
+# Comprehensive hotspot analysis for all risk categories
+hotspots_all <- sero_hotspots(data$accident, 
+                             risk_categories = c(1, 2, 3), 
+                             buffer = 1000)
+
+hotspots_high_risk <- sero_hotspots(data$accident, 
+                                   risk_categories = c(1, 2), 
+                                   buffer = 1000)
+
+hotspots_fatal <- sero_hotspots(data$accident, 
+                               risk_categories = c(1), 
+                               buffer = 800)
+
+# Display hotspot analysis results using plot method - shown individually for clarity
+plot_all <- plot(hotspots_all) + 
+  labs(title = "All Severity Hotspots Analysis", 
+       subtitle = "Comprehensive view: Fatal, serious, and light accidents combined",
+       caption = "Kernel density hotspot detection with 1000m buffer")
+
+plot_all
+
+plot_high_risk <- plot(hotspots_high_risk) + 
+  labs(title = "High-Risk Hotspots Analysis", 
+       subtitle = "Critical zones: Fatal and serious accidents only",
+       caption = "Focused analysis on most severe incidents requiring immediate response")
+
+plot_high_risk
+
+plot_fatal <- plot(hotspots_fatal) + 
+  labs(title = "Fatal Accident Hotspots Analysis", 
+       subtitle = "Maximum priority zones: Fatal accidents only",
+       caption = "Narrowest focus on most critical incident locations with 800m buffer")
+
+plot_fatal
+
+# Create performance comparison data for hotspot analysis
+hotspot_summary <- data.frame(
+  Analysis = c("All Severity", "High-Risk Only", "Fatal Only"),
+  Hotspots = c(nrow(hotspots_all$hotspots), 
+               nrow(hotspots_high_risk$hotspots), 
+               nrow(hotspots_fatal$hotspots)),
+  Total_Accidents = c(sum(hotspots_all$summary$total_accidents),
+                     sum(hotspots_high_risk$summary$total_accidents),
+                     sum(hotspots_fatal$summary$total_accidents))
+)
+
+# Performance comparison chart - displayed individually
+plot_summary <- ggplot(hotspot_summary, aes(x = Analysis, y = Hotspots, fill = Analysis)) +
+  geom_col(alpha = 0.8) +
+  geom_text(aes(label = paste0(Hotspots, " hotspots\n", Total_Accidents, " accidents")), 
+            vjust = 1.5, color = "white", fontface = "bold") +
+  scale_fill_manual(values = c("#2E86AB", "#F18F01", "#C73E1D")) +
+  labs(title = "Hotspot Analysis Performance Comparison", 
+       subtitle = "Effectiveness of different risk category approaches",
+       x = "Analysis Type", y = "Number of Hotspots Identified",
+       caption = "Comparison shows trade-offs between comprehensive vs. focused analysis") +
+  theme_minimal() +
+  theme(
+    legend.position = "none", 
+    plot.title = element_text(size = 14, face = "bold", color = "#2c3e50"),
+    plot.subtitle = element_text(size = 11, color = "#34495e"),
+    plot.caption = element_text(size = 9, color = "#7f8c8d"),
+    axis.title = element_text(size = 11, face = "bold"),
+    axis.text = element_text(size = 10),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+
+plot_summary
+
+# Display summary statistics
+summary(hotspots_high_risk)
+
+# Display individual hotspot visualizations instead of grid layout for better analysis
+```
+
+## Kernel Density Analysis
+
+Kernel density estimation provides smooth risk surfaces that reveal underlying spatial patterns and inform strategic planning.
+
+```{r heatmap-analysis}
+# Create comprehensive heatmap comparison for different risk categories with enhanced clarity
+# Display each heatmap individually for better visibility and analysis
+
+heatmap_fatal <- sero_heatmap(data$accident,
+                             risk_categories = c(1),
+                             bandwidth = 1000,
+                             data = data, 
+                             color_scheme = "plasma",
+                             basemap = "districts") +
+  labs(title = "Fatal Accidents Risk Surface Analysis", 
+       subtitle = "Highest priority emergency response zones",
+       caption = "Kernel density estimation with 1000m bandwidth - Areas requiring immediate station proximity") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", color = "#2c3e50"),
+    plot.subtitle = element_text(size = 11, color = "#34495e"),
+    plot.caption = element_text(size = 9, color = "#7f8c8d"),
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.text = element_text(size = 9),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+
+heatmap_fatal
+
+heatmap_serious <- sero_heatmap(data$accident,
+                               risk_categories = c(2),
+                               bandwidth = 1000,
+                               data = data, 
+                               color_scheme = "inferno",
+                               basemap = "districts") +
+  labs(title = "Serious Accidents Risk Surface Analysis", 
+       subtitle = "Secondary priority emergency response zones",
+       caption = "Major injury incidents requiring urgent medical care and rapid response") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", color = "#2c3e50"),
+    plot.subtitle = element_text(size = 11, color = "#34495e"),
+    plot.caption = element_text(size = 9, color = "#7f8c8d"),
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.text = element_text(size = 9),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+
+heatmap_serious
+
+heatmap_light <- sero_heatmap(data$accident,
+                             risk_categories = c(3),
+                             bandwidth = 1200,
+                             data = data, 
+                             color_scheme = "viridis",
+                             basemap = "districts") +
+  labs(title = "Light Accidents Risk Surface Analysis", 
+       subtitle = "General coverage areas for routine emergency response",
+       caption = "Minor injury incidents with broader 1200m bandwidth - Lower priority but still requiring coverage") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", color = "#2c3e50"),
+    plot.subtitle = element_text(size = 11, color = "#34495e"),
+    plot.caption = element_text(size = 9, color = "#7f8c8d"),
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.text = element_text(size = 9),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+
+heatmap_light
+
+heatmap_combined <- sero_heatmap(data$accident,
+                                risk_categories = c(1, 2),
+                                bandwidth = 1200,
+                                data = data, 
+                                color_scheme = "magma",
+                                basemap = "districts") +
+  labs(title = "Combined High-Risk Surface Analysis", 
+       subtitle = "Strategic planning priority zones for optimal emergency station placement",
+       caption = "Fatal and serious accidents combined - Primary focus areas for emergency service optimization") +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", color = "#2c3e50"),
+    plot.subtitle = element_text(size = 11, color = "#34495e"),
+    plot.caption = element_text(size = 9, color = "#7f8c8d"),
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.text = element_text(size = 9),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+
+heatmap_combined
+
+# Display individual heatmap visualizations instead of grid layout for detailed analysis
+```
+
+# Emergency Service Optimization
+
+## Optimal Location Strategy
+
+We apply spatial optimization algorithms to determine strategic emergency service locations that minimize average response distances to high-risk areas.
+
+```{r optimal-locations}
+# Calculate optimal emergency service locations
+optimal_3 <- sero_find_optimal_locations(data, 
+                                        num_locations = 3,
+                                        risk_categories = c(1, 2))
+
+optimal_5 <- sero_find_optimal_locations(data,
+                                        num_locations = 5, 
+                                        risk_categories = c(1, 2))
+
+optimal_7 <- sero_find_optimal_locations(data,
+                                        num_locations = 7,
+                                        risk_categories = c(1, 2))
+
+# Performance comparison
+performance_data <- data.frame(
+  Stations = c(3, 5, 7),
+  Avg_Coverage = c(mean(optimal_3$accessibility_score),
+                   mean(optimal_5$accessibility_score), 
+                   mean(optimal_7$accessibility_score)),
+  Max_Distance = c(max(optimal_3$accessibility_score),
+                   max(optimal_5$accessibility_score),
+                   max(optimal_7$accessibility_score))
+)
+
+# Display optimization summary
+summary(optimal_5)
+
+# Create spatial visualization of optimal locations
+library(sf)
+
+# Transform data to consistent CRS for visualization
+districts_viz <- st_transform(data$districts, 4326)
+landuse_viz <- st_transform(data$landuse, 4326)
+roads_viz <- st_transform(data$roads, 4326)
+high_risk_accidents <- data$accident[data$accident$UKATEGORIE %in% c(1, 2), ]
+accidents_viz <- st_transform(high_risk_accidents, 4326)
+
+# Transform optimal locations to WGS84
+optimal_3_viz <- st_transform(optimal_3, 4326)
+optimal_5_viz <- st_transform(optimal_5, 4326)
+optimal_7_viz <- st_transform(optimal_7, 4326)
+
+# Create enhanced base plot function with improved clarity
+create_location_plot <- function(optimal_locations, title, subtitle) {
+  # Add station numbers to the spatial data
+  optimal_locations$station_id <- paste("S", seq_len(nrow(optimal_locations)), sep="")
+  
+  ggplot() +
+    # Add land use (subtle background context)
+    geom_sf(data = landuse_viz, fill = "#f8f8f8", color = "#f0f0f0", size = 0.1, alpha = 0.4) +
+    # Add roads (infrastructure context)
+    geom_sf(data = roads_viz, color = "#e0e0e0", size = 0.3, alpha = 0.6) +
+    # Add district boundaries (clear administrative boundaries)
+    geom_sf(data = districts_viz, fill = "transparent", color = "#2c3e50", size = 1.2) +
+    # Add ALL high-risk accidents as context (background density)
+    geom_sf(data = accidents_viz, color = "#ffb3b3", size = 0.6, alpha = 0.5) +
+    # Add optimal locations (smaller size for better route visibility)
+    geom_sf(data = optimal_locations, size = 4, color = "#1a5490", fill = "#3498db", 
+            shape = 24, stroke = 1.5, alpha = 0.95) +
+    # Add labels for optimal locations
+    geom_sf_text(data = optimal_locations, aes(label = station_id), 
+                 size = 2.5, fontface = "bold", color = "white", 
+                 nudge_y = 0.001) +
+    labs(title = title, subtitle = subtitle) +
+    theme_void() +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5, color = "#2c3e50"),
+      plot.subtitle = element_text(size = 11, hjust = 0.5, color = "#34495e"),
+      plot.margin = margin(10, 10, 10, 10),
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA)
+    )
+}
+
+# Create individual plots with enhanced clarity - displayed separately
+plot_3 <- create_location_plot(optimal_3_viz, "3 Emergency Stations Configuration", 
+                              paste0("Coverage efficiency: ", round(mean(optimal_3$accessibility_score), 2), 
+                                   " | Max distance: ", round(max(optimal_3$accessibility_score), 2)))
+
+plot_3
+
+plot_5 <- create_location_plot(optimal_5_viz, "5 Emergency Stations Configuration", 
+                              paste0("Coverage efficiency: ", round(mean(optimal_5$accessibility_score), 2),
+                                   " | Max distance: ", round(max(optimal_5$accessibility_score), 2)))
+
+plot_5
+
+plot_7 <- create_location_plot(optimal_7_viz, "7 Emergency Stations Configuration", 
+                              paste0("Coverage efficiency: ", round(mean(optimal_7$accessibility_score), 2),
+                                   " | Max distance: ", round(max(optimal_7$accessibility_score), 2)))
+
+plot_7
+
+# Enhanced performance metrics plot with better clarity
+performance_plot <- ggplot(performance_data, aes(x = Stations)) +
+  geom_line(aes(y = Avg_Coverage, color = "Average Coverage"), size = 2, alpha = 0.9) +
+  geom_line(aes(y = Max_Distance, color = "Maximum Distance"), size = 2, alpha = 0.9) +
+  geom_point(aes(y = Avg_Coverage, color = "Average Coverage"), size = 4) +
+  geom_point(aes(y = Max_Distance, color = "Maximum Distance"), size = 4) +
+  geom_text(aes(y = Avg_Coverage, label = round(Avg_Coverage, 2)), 
+            vjust = -1.5, size = 3.5, fontface = "bold", color = "#2E86AB") +
+  geom_text(aes(y = Max_Distance, label = round(Max_Distance, 2)), 
+            vjust = 1.8, size = 3.5, fontface = "bold", color = "#A23B72") +
+  labs(title = "Station Performance Comparison",
+       subtitle = "Optimization trade-offs between coverage and resources",
+       x = "Number of Emergency Stations", 
+       y = "Accessibility Score (lower = better)",
+       color = "Performance Metric") +
+  scale_color_manual(values = c("Average Coverage" = "#2E86AB", "Maximum Distance" = "#A23B72")) +
+  scale_x_continuous(breaks = c(3, 5, 7)) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5, color = "#2c3e50"),
+    plot.subtitle = element_text(size = 11, hjust = 0.5, color = "#34495e"),
+    legend.position = "bottom",
+    legend.title = element_text(size = 11, face = "bold"),
+    legend.text = element_text(size = 10),
+    axis.title = element_text(size = 11, face = "bold"),
+    axis.text = element_text(size = 10),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+
+performance_plot
+
+# Display separate visualizations instead of grid layout for better clarity
+```
+
+## Route Analysis
+
+Route optimization calculates emergency response paths from stations to incident locations, providing critical performance metrics.
+
+```{r route-analysis}
+# Use actual high-risk accident locations for route analysis
+# Select accidents from different districts to ensure geographic diversity
+high_risk_accidents <- data$accident[data$accident$UKATEGORIE %in% c(1, 2), ]
+
+# Get representative accidents from different areas
+set.seed(123)  # For reproducible results
+sample_accidents <- high_risk_accidents[sample(nrow(high_risk_accidents), 12), ]
+
+# Calculate routes using 5-station configuration
+routes <- sero_routes(optimal_5, 
+                     sample_accidents, 
+                     max_routes = 12,
+                     data = data)
+
+# Display route analysis summary
+summary(routes)
+
+# Create enhanced spatial visualization of routes
+# Transform route data for visualization with better clarity
+routes_viz <- st_transform(routes$routes, 4326)
+sample_accidents_viz <- st_transform(sample_accidents, 4326)
+all_accidents_viz <- st_transform(high_risk_accidents, 4326)
+
+# Add time categories to routes with clear labels
+routes_viz$time_category <- cut(routes_viz$estimated_time,
+                               breaks = c(0, 5, 10, Inf),
+                               labels = c("Fast (< 5 min)", "Medium (5-10 min)", "Slow (> 10 min)"))
+
+# Enhanced route visualization function with better clarity and smaller station icons
+create_route_plot <- function(show_landuse = FALSE, show_roads = FALSE, show_all_accidents = FALSE, title, subtitle) {
+  p <- ggplot()
+  
+  # Add land use if requested (subtle background)
+  if (show_landuse) {
+    p <- p + geom_sf(data = landuse_viz, fill = "#f8f8f8", color = "#f0f0f0", 
+                     size = 0.1, alpha = 0.4)
+  }
+  
+  # Add roads if requested (infrastructure context)
+  if (show_roads) {
+    p <- p + geom_sf(data = roads_viz, color = "#cccccc", size = 0.3, alpha = 0.6)
+  }
+  
+  # Add all high-risk accidents as context (background points)
+  if (show_all_accidents) {
+    p <- p + geom_sf(data = all_accidents_viz, color = "#ffcccc", size = 0.5, alpha = 0.4)
+  }
+  
+  # Add district boundaries (clear administrative context)
+  p <- p + geom_sf(data = districts_viz, fill = "transparent", color = "#2c3e50", 
+                   size = 1.0, alpha = 0.9)
+  
+  # Add route lines with enhanced visibility and clear color coding
+  p <- p + geom_sf(data = routes_viz, aes(color = time_category), size = 2.5, alpha = 0.9)
+  
+  # Add selected accident locations (prominent destination points)
+  p <- p + geom_sf(data = sample_accidents_viz, color = "#cc0000", fill = "#ff3333", 
+                   size = 3, alpha = 0.9, shape = 21, stroke = 1)
+  
+  # Add emergency stations with SMALLER size for better route visibility
+  p <- p + geom_sf(data = optimal_5_viz, size = 3.5, color = "#1a5490", fill = "#3498db", 
+                   shape = 24, stroke = 1.5, alpha = 0.95)
+  
+  # Enhanced styling with clear color scheme and improved readability
+  p <- p + 
+    scale_color_manual(
+      values = c("Fast (< 5 min)" = "#27AE60", 
+                "Medium (5-10 min)" = "#F39C12", 
+                "Slow (> 10 min)" = "#E74C3C"),
+      name = "Response Time"
+    ) +
+    labs(title = title, subtitle = subtitle) +
+    theme_void() +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5, color = "#2c3e50"),
+      plot.subtitle = element_text(size = 11, hjust = 0.5, color = "#34495e"),
+      legend.position = "bottom",
+      legend.title = element_text(size = 11, face = "bold"),
+      legend.text = element_text(size = 10),
+      plot.margin = margin(10, 10, 10, 10),
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA)
+    )
+  
+  return(p)
+}
+
+# Create enhanced route visualizations with improved clarity - displayed separately
+route_basic <- create_route_plot(
+  show_landuse = FALSE, show_roads = FALSE, show_all_accidents = TRUE,
+  "Emergency Response Routes: Basic View", 
+  "Routes from stations to actual accident locations with route lines clearly visible"
+)
+
+route_basic
+
+route_with_roads <- create_route_plot(
+  show_landuse = FALSE, show_roads = TRUE, show_all_accidents = FALSE,
+  "Routes with Transportation Network", 
+  "Infrastructure context for emergency routing with road network overlay"
+)
+
+route_with_roads
+
+route_with_landuse <- create_route_plot(
+  show_landuse = TRUE, show_roads = FALSE, show_all_accidents = FALSE,
+  "Routes with Geographic Context", 
+  "Land use patterns and emergency response coverage context"
+)
+
+route_with_landuse
+
+# Enhanced performance summary with actual route statistics
+route_stats_summary <- data.frame(
+  Response_Time = c("Fast (< 5 min)", "Medium (5-10 min)", "Slow (> 10 min)"),
+  Count = c(
+    sum(routes_viz$time_category == "Fast (< 5 min)"),
+    sum(routes_viz$time_category == "Medium (5-10 min)"),
+    sum(routes_viz$time_category == "Slow (> 10 min)")
+  ),
+  Percentage = round(c(
+    mean(routes_viz$time_category == "Fast (< 5 min)") * 100,
+    mean(routes_viz$time_category == "Medium (5-10 min)") * 100,
+    mean(routes_viz$time_category == "Slow (> 10 min)") * 100
+  ), 1)
+)
+
+performance_summary <- ggplot(route_stats_summary, aes(x = Response_Time, y = Count, fill = Response_Time)) +
+  geom_col(alpha = 0.8, color = "white", size = 1) +
+  geom_text(aes(label = paste0(Count, " routes\n(", Percentage, "%)")), 
+            vjust = 1.5, color = "white", fontface = "bold", size = 4) +
+  scale_fill_manual(
+    values = c("Fast (< 5 min)" = "#27AE60", 
+              "Medium (5-10 min)" = "#F39C12", 
+              "Slow (> 10 min)" = "#E74C3C")
+  ) +
+  labs(
+    title = "Route Performance Distribution",
+    subtitle = paste0("Average response time: ", round(mean(routes$routes$estimated_time), 1), " minutes"),
+    x = "Response Time Category", 
+    y = "Number of Routes"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5, color = "#2c3e50"),
+    plot.subtitle = element_text(size = 11, hjust = 0.5, color = "#34495e"),
+    legend.position = "none",
+    axis.title = element_text(size = 11, face = "bold"),
+    axis.text = element_text(size = 10),
+    panel.grid.major.x = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+
+performance_summary
+
+# Display detailed route performance metrics table
+route_performance <- data.frame(
+  Metric = c("Total Routes", "Accidents Covered", "Avg Response Time (min)", 
+             "Avg Distance (km)", "Best Response Time (min)", "Worst Response Time (min)"),
+  Value = c(
+    nrow(routes$routes),
+    nrow(sample_accidents),
+    round(mean(routes$routes$estimated_time), 2),
+    round(mean(routes$routes$distance)/1000, 2),
+    round(min(routes$routes$estimated_time), 2),
+    round(max(routes$routes$estimated_time), 2)
+  )
+)
+
+print(route_performance)
+
+# Display separate visualizations instead of grid layout for better route visibility
+```
+
+# Discussion of Results
+
+## Key Findings
+
+The spatial analysis reveals several critical insights for emergency service planning in Münster. Hotspot analysis identifies `r nrow(hotspots_high_risk$hotspots)` high-risk areas requiring priority attention, with fatal accidents concentrated in `r nrow(hotspots_fatal$hotspots)` critical zones. The severity distribution shows that while fatal accidents represent only `r severity_df$Percentage[1]`% of total incidents, they require the most immediate response capabilities.
+
+The optimization analysis demonstrates clear performance trade-offs between station quantity and coverage efficiency. While 3 stations provide basic coverage with an average accessibility score of `r round(mean(optimal_3$accessibility_score), 2)`, expanding to 5 stations improves coverage to `r round(mean(optimal_5$accessibility_score), 2)` with diminishing returns at 7 stations (`r round(mean(optimal_7$accessibility_score), 2)`). Route analysis confirms that the 5-station configuration achieves optimal response times for most high-risk incidents.
+
+## Strategic Recommendations
+
+Based on this analysis, we recommend implementing a 5-station emergency service configuration that balances coverage efficiency with resource constraints. Priority should be given to establishing services near identified hotspots, ensuring rapid response to areas with the highest concentration of severe accidents. The kernel density analysis provides precise coordinates for optimal placement, moving beyond administrative boundaries to data-driven positioning.
+
+The comprehensive hotspot analysis reveals that different risk categories require tailored strategies, with fatal accident zones needing immediate proximity to emergency services, while broader coverage can address the more numerous but less critical incidents.
+
+## Limitations and Future Work
+
+This analysis focuses on historical accident patterns and assumes static emergency response infrastructure. Future research should incorporate temporal dynamics, traffic patterns, and real-time routing constraints. Additionally, validation against actual emergency response data would strengthen the practical applicability of these recommendations.
+
+# Conclusion
+
+The SERO package demonstrates the value of spatial statistical methods for emergency service optimization. By combining hotspot analysis, kernel density estimation, and optimization algorithms, we can move from intuition-based to evidence-based emergency service planning. The Münster case study shows how these methods reveal hidden patterns in accident data and provide actionable recommendations for improving emergency response coverage and efficiency.
