@@ -414,6 +414,11 @@ calculate_road_routes <- function(service_locations, accidents, max_routes, data
     # Find closest service location using road network distance approximation
     accident_point <- accidents[i, ]
     
+    # Ensure same CRS for distance calculation
+    if (sf::st_crs(service_locations) != sf::st_crs(accident_point)) {
+      accident_point <- sf::st_transform(accident_point, sf::st_crs(service_locations))
+    }
+    
     # Calculate distances to all service locations
     # For simplicity, use straight-line distance but increase by road factor
     straight_distances <- sf::st_distance(service_locations, accident_point)
