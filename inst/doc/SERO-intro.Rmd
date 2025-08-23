@@ -1,10 +1,10 @@
 ---
-title: "Spatial Emergency Response Optimization: A Data-Driven Approach to Emergency Service Location Planning"
-author: "SERO Development Team"
+title: "Spatial Emergency Response Optimization"
+author: "Prince Oppong Boakye"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Spatial Emergency Response Optimization: A Data-Driven Approach to Emergency Service Location Planning}
+  %\VignetteIndexEntry{Spatial Emergency Response Optimization}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -22,29 +22,13 @@ knitr::opts_chunk$set(
 
 # Introduction and Motivation
 
-Emergency response systems face critical challenges in optimally positioning emergency services to minimize response times and maximize coverage. The spatial distribution of accidents exhibits distinct patterns that can inform strategic placement of emergency stations. This analysis demonstrates how spatial statistical methods can identify high-risk areas and optimize emergency service locations using real traffic accident data from Münster, Germany.
+Emergency response systems require optimal positioning to minimize response times and maximize coverage. This analysis demonstrates spatial statistical methods for identifying high-risk areas and optimizing emergency service locations using traffic accident data from Münster, Germany.
 
-The motivation for this work stems from the need to transition from intuition-based to data-driven emergency service planning. Traditional approaches often rely on administrative boundaries or population density alone, potentially missing critical accident concentration areas that emerge from complex urban dynamics. By applying kernel density estimation and spatial optimization algorithms, we can reveal hidden patterns and provide evidence-based recommendations for emergency service deployment.
-
-## Optimal Location Calculation Logic
-
-The optimal emergency service locations are calculated using a sophisticated spatial optimization algorithm that follows these key principles:
-
-1. **Distance-Based Accessibility**: The algorithm calculates accessibility scores based on Euclidean distances from potential emergency station locations to all high-risk accident sites (severity categories 1 and 2 - fatal and serious accidents).
-
-2. **Weighted Risk Categories**: Fatal accidents (category 1) receive higher priority weights than serious accidents (category 2) in the optimization function, ensuring that the most critical incidents have the shortest response distances.
-
-3. **Coverage Optimization**: The algorithm seeks to minimize the average distance from emergency stations to accident locations while ensuring that no accident location is beyond a reasonable response distance.
-
-4. **Iterative Placement**: Starting with candidate locations distributed across the study area, the algorithm iteratively adjusts station positions to minimize the overall accessibility score (lower scores indicate better coverage).
-
-5. **Spatial Constraints**: The optimization considers geographical constraints such as road networks, land use patterns, and administrative boundaries to ensure that proposed locations are practically feasible.
-
-The accessibility score represents the average weighted distance from all emergency stations to accident locations, where lower scores indicate more efficient coverage. This approach ensures that emergency services are positioned to provide the fastest possible response to the most critical incidents while maintaining reasonable coverage for all accident types.
+The SERO package enables data-driven emergency service planning through kernel density estimation and spatial optimization algorithms, revealing hidden patterns in accident data and providing evidence-based recommendations for emergency service deployment.
 
 # Data Description and Exploration
 
-The analysis utilizes a comprehensive spatial dataset from Münster containing traffic accidents, administrative boundaries, road networks, land use patterns, and population distributions. This dataset provides the foundation for understanding spatial accident patterns and optimizing emergency response strategies.
+The analysis uses comprehensive spatial data from Münster including traffic accidents, administrative boundaries, road networks, land use patterns, and population distributions.
 
 ```{r data-loading}
 library(SERO)
@@ -81,41 +65,33 @@ p1 <- ggplot(severity_df, aes(x = Category, y = Count, fill = Category)) +
   geom_text(aes(label = paste0(Count, "\n(", Percentage, "%)")), 
             vjust = 1.5, color = "white", fontface = "bold", size = 4) +
   scale_fill_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
-  labs(title = "Accident Count by Severity", 
-       subtitle = "Absolute numbers and percentages",
-       x = "Accident Severity", y = "Number of Incidents") +
+  labs(title = "Accident Count by Severity", x = "Accident Severity", y = "Number of Incidents") +
   theme_minimal() +
-  theme(legend.position = "none", plot.title = element_text(size = 12, face = "bold"))
+  theme(legend.position = "none")
 
 p2 <- ggplot(severity_df, aes(x = "", y = Count, fill = Category)) +
   geom_bar(stat = "identity", width = 1) +
   coord_polar("y", start = 0) +
   scale_fill_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
-  labs(title = "Severity Distribution", subtitle = "Proportional view", fill = "Category") +
+  labs(title = "Severity Distribution", fill = "Category") +
   theme_void() +
-  theme(plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
-        plot.subtitle = element_text(size = 10, hjust = 0.5),
-        legend.position = "bottom")
+  theme(legend.position = "bottom")
 
 p3 <- ggplot(severity_df, aes(x = reorder(Category, -Count), y = Percentage, fill = Category)) +
   geom_col(alpha = 0.8) +
   geom_text(aes(label = paste0(Percentage, "%")), vjust = -0.5, fontface = "bold") +
   scale_fill_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
-  labs(title = "Percentage Distribution", 
-       subtitle = "Risk category proportions",
-       x = "Accident Severity", y = "Percentage (%)") +
+  labs(title = "Percentage Distribution", x = "Accident Severity", y = "Percentage (%)") +
   theme_minimal() +
-  theme(legend.position = "none", plot.title = element_text(size = 12, face = "bold"))
+  theme(legend.position = "none")
 
 p4 <- ggplot(severity_df, aes(x = Category, y = Count)) +
   geom_segment(aes(xend = Category, yend = 0, color = Category), size = 8, alpha = 0.7) +
   geom_point(aes(color = Category), size = 4) +
   scale_color_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
-  labs(title = "Emergency Response Priority", 
-       subtitle = "Critical incidents requiring immediate attention",
-       x = "Accident Severity", y = "Number of Incidents") +
+  labs(title = "Emergency Response Priority", x = "Accident Severity", y = "Number of Incidents") +
   theme_minimal() +
-  theme(legend.position = "none", plot.title = element_text(size = 12, face = "bold"))
+  theme(legend.position = "none")
 
 # Create 2x2 grid for comprehensive severity analysis
 grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
@@ -126,45 +102,18 @@ summary(severity_df)
 
 # Spatial Pattern Analysis
 
-## Hotspot Detection
-
-We identify accident concentration areas using kernel density estimation to reveal spatial clustering patterns invisible to traditional analysis methods.
+Spatial analysis identifies accident concentration areas using kernel density estimation and hotspot detection to reveal clustering patterns.
 
 ```{r hotspot-analysis}
 # Comprehensive hotspot analysis for all risk categories
-hotspots_all <- sero_hotspots(data$accident, 
-                             risk_categories = c(1, 2, 3), 
-                             buffer = 1000)
+hotspots_all <- sero_hotspots(data$accident, risk_categories = c(1, 2, 3), buffer = 1000)
+hotspots_high_risk <- sero_hotspots(data$accident, risk_categories = c(1, 2), buffer = 1000)
+hotspots_fatal <- sero_hotspots(data$accident, risk_categories = c(1), buffer = 800)
 
-hotspots_high_risk <- sero_hotspots(data$accident, 
-                                   risk_categories = c(1, 2), 
-                                   buffer = 1000)
-
-hotspots_fatal <- sero_hotspots(data$accident, 
-                               risk_categories = c(1), 
-                               buffer = 800)
-
-# Display hotspot analysis results using plot method - shown individually for clarity
-plot_all <- plot(hotspots_all) + 
-  labs(title = "All Severity Hotspots Analysis", 
-       subtitle = "Comprehensive view: Fatal, serious, and light accidents combined",
-       caption = "Kernel density hotspot detection with 1000m buffer")
-
-plot_all
-
-plot_high_risk <- plot(hotspots_high_risk) + 
-  labs(title = "High-Risk Hotspots Analysis", 
-       subtitle = "Critical zones: Fatal and serious accidents only",
-       caption = "Focused analysis on most severe incidents requiring immediate response")
-
-plot_high_risk
-
-plot_fatal <- plot(hotspots_fatal) + 
-  labs(title = "Fatal Accident Hotspots Analysis", 
-       subtitle = "Maximum priority zones: Fatal accidents only",
-       caption = "Narrowest focus on most critical incident locations with 800m buffer")
-
-plot_fatal
+# Display hotspot visualizations
+plot(hotspots_all) + labs(title = "All Severity Hotspots")
+plot(hotspots_high_risk) + labs(title = "High-Risk Hotspots")
+plot(hotspots_fatal) + labs(title = "Fatal Accident Hotspots")
 
 # Create performance comparison data for hotspot analysis
 hotspot_summary <- data.frame(
@@ -309,9 +258,7 @@ heatmap_combined
 
 # Emergency Service Optimization
 
-## Optimal Location Strategy
-
-We apply spatial optimization algorithms to determine strategic emergency service locations that minimize average response distances to high-risk areas.
+Spatial optimization algorithms determine strategic emergency service locations that minimize average response distances to high-risk areas.
 
 ```{r optimal-locations}
 # Calculate optimal emergency service locations
@@ -625,24 +572,16 @@ print(route_performance)
 # Display separate visualizations instead of grid layout for better route visibility
 ```
 
-# Discussion of Results
+# Discussion and Conclusion
 
-## Key Findings
+The spatial analysis reveals critical insights for emergency service planning in Münster. Hotspot analysis identifies high-risk areas requiring priority attention, with clear severity distribution patterns. The optimization demonstrates performance trade-offs between station quantity and coverage efficiency.
 
-The spatial analysis reveals several critical insights for emergency service planning in Münster. Hotspot analysis identifies `r nrow(hotspots_high_risk$hotspots)` high-risk areas requiring priority attention, with fatal accidents concentrated in `r nrow(hotspots_fatal$hotspots)` critical zones. The severity distribution shows that while fatal accidents represent only `r severity_df$Percentage[1]`% of total incidents, they require the most immediate response capabilities.
+While 3 stations provide basic coverage, 5 stations achieve optimal performance with diminishing returns at 7 stations. Route analysis confirms efficient response times for most high-risk incidents with the 5-station configuration.
 
-The optimization analysis demonstrates clear performance trade-offs between station quantity and coverage efficiency. While 3 stations provide basic coverage with an average accessibility score of `r round(mean(optimal_3$accessibility_score), 2)`, expanding to 5 stations improves coverage to `r round(mean(optimal_5$accessibility_score), 2)` with diminishing returns at 7 stations (`r round(mean(optimal_7$accessibility_score), 2)`). Route analysis confirms that the 5-station configuration achieves optimal response times for most high-risk incidents.
+## Limitations
 
-## Strategic Recommendations
+This analysis focuses on historical accident patterns assuming static infrastructure. Future research should incorporate temporal dynamics, traffic patterns, and real-time routing constraints.
 
-Based on this analysis, we recommend implementing a 5-station emergency service configuration that balances coverage efficiency with resource constraints. Priority should be given to establishing services near identified hotspots, ensuring rapid response to areas with the highest concentration of severe accidents. The kernel density analysis provides precise coordinates for optimal placement, moving beyond administrative boundaries to data-driven positioning.
+## Key Contributions
 
-The comprehensive hotspot analysis reveals that different risk categories require tailored strategies, with fatal accident zones needing immediate proximity to emergency services, while broader coverage can address the more numerous but less critical incidents.
-
-## Limitations and Future Work
-
-This analysis focuses on historical accident patterns and assumes static emergency response infrastructure. Future research should incorporate temporal dynamics, traffic patterns, and real-time routing constraints. Additionally, validation against actual emergency response data would strengthen the practical applicability of these recommendations.
-
-# Conclusion
-
-The SERO package demonstrates the value of spatial statistical methods for emergency service optimization. By combining hotspot analysis, kernel density estimation, and optimization algorithms, we can move from intuition-based to evidence-based emergency service planning. The Münster case study shows how these methods reveal hidden patterns in accident data and provide actionable recommendations for improving emergency response coverage and efficiency.
+The SERO package demonstrates the value of spatial statistical methods for emergency service optimization. By combining hotspot analysis, kernel density estimation, and optimization algorithms, it enables evidence-based emergency service planning that reveals hidden patterns and provides actionable recommendations for improving response coverage and efficiency.

@@ -8,7 +8,6 @@ knitr::opts_chunk$set(
   fig.align = "center"
 )
 
-
 ## ----data-loading-------------------------------------------------------------
 library(SERO)
 library(ggplot2)
@@ -28,7 +27,6 @@ data_summary <- data.frame(
 
 print(data_summary)
 
-
 ## ----accident-severity-analysis-----------------------------------------------
 # Analyze accident severity distribution
 severity_counts <- table(data$accident$UKATEGORIE)
@@ -44,41 +42,33 @@ p1 <- ggplot(severity_df, aes(x = Category, y = Count, fill = Category)) +
   geom_text(aes(label = paste0(Count, "\n(", Percentage, "%)")), 
             vjust = 1.5, color = "white", fontface = "bold", size = 4) +
   scale_fill_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
-  labs(title = "Accident Count by Severity", 
-       subtitle = "Absolute numbers and percentages",
-       x = "Accident Severity", y = "Number of Incidents") +
+  labs(title = "Accident Count by Severity", x = "Accident Severity", y = "Number of Incidents") +
   theme_minimal() +
-  theme(legend.position = "none", plot.title = element_text(size = 12, face = "bold"))
+  theme(legend.position = "none")
 
 p2 <- ggplot(severity_df, aes(x = "", y = Count, fill = Category)) +
   geom_bar(stat = "identity", width = 1) +
   coord_polar("y", start = 0) +
   scale_fill_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
-  labs(title = "Severity Distribution", subtitle = "Proportional view", fill = "Category") +
+  labs(title = "Severity Distribution", fill = "Category") +
   theme_void() +
-  theme(plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
-        plot.subtitle = element_text(size = 10, hjust = 0.5),
-        legend.position = "bottom")
+  theme(legend.position = "bottom")
 
 p3 <- ggplot(severity_df, aes(x = reorder(Category, -Count), y = Percentage, fill = Category)) +
   geom_col(alpha = 0.8) +
   geom_text(aes(label = paste0(Percentage, "%")), vjust = -0.5, fontface = "bold") +
   scale_fill_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
-  labs(title = "Percentage Distribution", 
-       subtitle = "Risk category proportions",
-       x = "Accident Severity", y = "Percentage (%)") +
+  labs(title = "Percentage Distribution", x = "Accident Severity", y = "Percentage (%)") +
   theme_minimal() +
-  theme(legend.position = "none", plot.title = element_text(size = 12, face = "bold"))
+  theme(legend.position = "none")
 
 p4 <- ggplot(severity_df, aes(x = Category, y = Count)) +
   geom_segment(aes(xend = Category, yend = 0, color = Category), size = 8, alpha = 0.7) +
   geom_point(aes(color = Category), size = 4) +
   scale_color_manual(values = c("Fatal" = "#8B0000", "Serious" = "#FF4500", "Light" = "#FFD700")) +
-  labs(title = "Emergency Response Priority", 
-       subtitle = "Critical incidents requiring immediate attention",
-       x = "Accident Severity", y = "Number of Incidents") +
+  labs(title = "Emergency Response Priority", x = "Accident Severity", y = "Number of Incidents") +
   theme_minimal() +
-  theme(legend.position = "none", plot.title = element_text(size = 12, face = "bold"))
+  theme(legend.position = "none")
 
 # Create 2x2 grid for comprehensive severity analysis
 grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
@@ -86,42 +76,16 @@ grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
 # Summary statistics
 summary(severity_df)
 
-
 ## ----hotspot-analysis---------------------------------------------------------
 # Comprehensive hotspot analysis for all risk categories
-hotspots_all <- sero_hotspots(data$accident, 
-                             risk_categories = c(1, 2, 3), 
-                             buffer = 1000)
+hotspots_all <- sero_hotspots(data$accident, risk_categories = c(1, 2, 3), buffer = 1000)
+hotspots_high_risk <- sero_hotspots(data$accident, risk_categories = c(1, 2), buffer = 1000)
+hotspots_fatal <- sero_hotspots(data$accident, risk_categories = c(1), buffer = 800)
 
-hotspots_high_risk <- sero_hotspots(data$accident, 
-                                   risk_categories = c(1, 2), 
-                                   buffer = 1000)
-
-hotspots_fatal <- sero_hotspots(data$accident, 
-                               risk_categories = c(1), 
-                               buffer = 800)
-
-# Display hotspot analysis results using plot method - shown individually for clarity
-plot_all <- plot(hotspots_all) + 
-  labs(title = "All Severity Hotspots Analysis", 
-       subtitle = "Comprehensive view: Fatal, serious, and light accidents combined",
-       caption = "Kernel density hotspot detection with 1000m buffer")
-
-plot_all
-
-plot_high_risk <- plot(hotspots_high_risk) + 
-  labs(title = "High-Risk Hotspots Analysis", 
-       subtitle = "Critical zones: Fatal and serious accidents only",
-       caption = "Focused analysis on most severe incidents requiring immediate response")
-
-plot_high_risk
-
-plot_fatal <- plot(hotspots_fatal) + 
-  labs(title = "Fatal Accident Hotspots Analysis", 
-       subtitle = "Maximum priority zones: Fatal accidents only",
-       caption = "Narrowest focus on most critical incident locations with 800m buffer")
-
-plot_fatal
+# Display hotspot visualizations
+plot(hotspots_all) + labs(title = "All Severity Hotspots")
+plot(hotspots_high_risk) + labs(title = "High-Risk Hotspots")
+plot(hotspots_fatal) + labs(title = "Fatal Accident Hotspots")
 
 # Create performance comparison data for hotspot analysis
 hotspot_summary <- data.frame(
@@ -163,7 +127,6 @@ plot_summary
 summary(hotspots_high_risk)
 
 # Display individual hotspot visualizations instead of grid layout for better analysis
-
 
 ## ----heatmap-analysis---------------------------------------------------------
 # Create comprehensive heatmap comparison for different risk categories with enhanced clarity
@@ -258,7 +221,6 @@ heatmap_combined <- sero_heatmap(data$accident,
 heatmap_combined
 
 # Display individual heatmap visualizations instead of grid layout for detailed analysis
-
 
 ## ----optimal-locations--------------------------------------------------------
 # Calculate optimal emergency service locations
@@ -389,7 +351,6 @@ performance_plot <- ggplot(performance_data, aes(x = Stations)) +
 performance_plot
 
 # Display separate visualizations instead of grid layout for better clarity
-
 
 ## ----route-analysis-----------------------------------------------------------
 # Use actual high-risk accident locations for route analysis
