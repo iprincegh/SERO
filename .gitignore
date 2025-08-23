@@ -61,3 +61,15 @@ Thumbs.db
 *~
 /doc/
 /Meta/
+
+# Generated figures (will be recreated when building vignettes)
+/figure/
+
+# R check directories
+*.Rcheck/
+SERO.Rcheck/
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.log
