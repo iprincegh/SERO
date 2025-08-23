@@ -48,6 +48,19 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
+# Auto-generated package documentation
+doc/
+Meta/
+
+# macOS system files
+.DS_Store
+*/.DS_Store
+
+# Additional temporary files
+*.bak
+*.tmp
+*.log
+
 # Mac OS
 .DS_Store
 
